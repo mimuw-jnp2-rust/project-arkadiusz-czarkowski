@@ -1,27 +1,24 @@
-# Frobnicator
+# Silnik szachowy
 
 ## Autorzy
-- Andrzej Głuszak (gr 9, @agluszak na githubie)
-- Linus Torvalds (Uniwersytet Helsiński, @torvalds na githubie)
+- Arkadiusz Czarkowski (gr 4, @Markadiusz na githubie)
 
 ## Opis
-Od zawsze chcieliśmy napisać grę komputerową.
-Frobnicator będzie to gra platformowa, w której chodzi o to, żeby...
+Chciałbym stworzyć silnik szachowy oraz środowisko graficzne, w którym będzie można przeciwko niemu grać.
 
-Z grubsza będziemy wzorować się na [tym tutorialu](https://dev.to/sbelzile/rust-platformer-part-1-bevy-and-ecs-2pci).
+Z grubsza będę wzorować się na [tej stronie](https://www.chessprogramming.org/).
 
 ## Funkcjonalność
-- Generowanie map
-- Strzelanie
-- AI dla wrogów (bardziej rozbudowane niż w tutorialu)
-- Możliwość zapisywania i wczytywania stanu gry
-- Punktacja
+- Podstawowa:
+-- gra przeciwko silnikowi
+
+- Dodatkowa (jeżeli starczy na to czasu):
+-- jakieś ułatwiające/uprzyjemniające grę funkcjonalności np. cofanie ruchu, podpowiedzi, podświetlanie możliwych ruchów, wskazywanie zagrożeń 
 
 ## Propozycja podziału na części
-W pierwszej części stworzymy grę opartą na tutorialu (z lepszym AI) i jedną zahardcodowaną planszą.
+W pierwszej części zacząłbym pisać podstawy silnika oraz środowisko graficzne tak by były ze sobą kompatybilne oraz by dało się rozegrać już jakąś podstawową grę.
 
-W drugiej części dodamy do tego losowy generator map, zapisywanie/wczytywanie stanu gry oraz system punktacji.
+W drugiej części dalej ulepszałbym silnik oraz jeżeli starczy na to czasu to dodałbym pozostałe funkcjonalności.
 
 ## Biblioteki
 - Bevy
-- może coś do serializacji danych? (czy mógłby Pan coś polecić?)
