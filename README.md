@@ -10,10 +10,10 @@ Z grubsza będę wzorować się na [tej stronie](https://www.chessprogramming.or
 
 ## Funkcjonalność
 - Podstawowa:
--- gra przeciwko silnikowi
+	- gra przeciwko silnikowi
 
 - Dodatkowa (jeżeli starczy na to czasu):
--- jakieś ułatwiające/uprzyjemniające grę funkcjonalności np. cofanie ruchu, podpowiedzi, podświetlanie możliwych ruchów, wskazywanie zagrożeń 
+	- jakieś ułatwiające/uprzyjemniające grę funkcjonalności np. cofanie ruchu, podpowiedzi, podświetlanie możliwych ruchów, wskazywanie zagrożeń 
 
 ## Propozycja podziału na części
 W pierwszej części zacząłbym pisać podstawy silnika oraz środowisko graficzne tak by były ze sobą kompatybilne oraz by dało się rozegrać już jakąś podstawową grę.
