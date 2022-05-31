@@ -52,36 +52,37 @@ enum PieceType {
 struct Piece {
     color: PieceColor,
     piece_type: PieceType,
-    x: u8,
-    y: u8,
+    x: i8,
+    y: i8,
 }
 
 impl Piece {
-    fn can_move_king(&self, x: u8, y: u8) -> bool {
+    fn can_move_king(&self, x: i8, y: i8) -> bool {
+        i8::abs(self.x - x) <= 1 && i8::abs(self.y - y) <= 1
+    }
+
+    fn can_move_queen(&self, x: i8, y: i8) -> bool {
+        can_move_rook(x, y) || can_move_bishop(x, y)
+    }
+
+    fn can_move_rook(&self, x: i8, y: i8) -> bool {
         true
     }
 
-    fn can_move_queen(&self, x: u8, y: u8) -> bool {
+    fn can_move_bishop(&self, x: i8, y: i8) -> bool {
         true
     }
 
-    fn can_move_rook(&self, x: u8, y: u8) -> bool {
+    fn can_move_knight(&self, x: i8, y: i8) -> bool {
+        (i8::abs(self.x - x) == 1 && i8::abs(self.y - y) == 2)
+            || (i8::abs(self.x - x) == 2 && i8::abs(self.y - y) == 1)
+    }
+
+    fn can_move_pawn(&self, x: i8, y: i8) -> bool {
         true
     }
 
-    fn can_move_bishop(&self, x: u8, y: u8) -> bool {
-        true
-    }
-
-    fn can_move_knight(&self, x: u8, y: u8) -> bool {
-        true
-    }
-
-    fn can_move_pawn(&self, x: u8, y: u8) -> bool {
-        true
-    }
-
-    fn can_move(&self, x: u8, y: u8) -> bool { // ignores attacks on the king and pins
+    fn can_move(&self, x: i8, y: i8) -> bool { // ignores attacks on the king and pins
         // add a check for the square being occupied by a piece of the same color
         match self.piece_type {
             PieceType::King => self.can_move_king(x, y),
@@ -93,7 +94,7 @@ impl Piece {
         }
     }
 
-    fn move_piece(&mut self, x: u8, y: u8) {
+    fn move_piece(&mut self, x: i8, y: i8) {
         self.x = x;
         self.y = y;
     }
@@ -292,8 +293,8 @@ fn spawn_piece(
     }).insert(Piece {
         color,
         piece_type,
-        x: position.x as u8,
-        y: position.y as u8,
+        x: position.x as i8,
+        y: position.y as i8,
     });
 }
 
