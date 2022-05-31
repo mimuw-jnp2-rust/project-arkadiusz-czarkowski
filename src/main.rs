@@ -62,7 +62,7 @@ impl Piece {
     }
 
     fn can_move_queen(&self, x: i8, y: i8) -> bool {
-        can_move_rook(x, y) || can_move_bishop(x, y)
+        self.can_move_rook(x, y) || self.can_move_bishop(x, y)
     }
 
     fn can_move_rook(&self, x: i8, y: i8) -> bool {
