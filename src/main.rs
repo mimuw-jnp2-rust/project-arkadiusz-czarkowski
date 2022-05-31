@@ -56,6 +56,49 @@ struct Piece {
     y: u8,
 }
 
+impl Piece {
+    fn can_move_king(&self, x: u8, y: u8) -> bool {
+        true
+    }
+
+    fn can_move_queen(&self, x: u8, y: u8) -> bool {
+        true
+    }
+
+    fn can_move_rook(&self, x: u8, y: u8) -> bool {
+        true
+    }
+
+    fn can_move_bishop(&self, x: u8, y: u8) -> bool {
+        true
+    }
+
+    fn can_move_knight(&self, x: u8, y: u8) -> bool {
+        true
+    }
+
+    fn can_move_pawn(&self, x: u8, y: u8) -> bool {
+        true
+    }
+
+    fn can_move(&self, x: u8, y: u8) -> bool { // ignores attacks on the king and pins
+        // add a check for the square being occupied by a piece of the same color
+        match self.piece_type {
+            PieceType::King => self.can_move_king(x, y),
+            PieceType::Queen => self.can_move_queen(x, y),
+            PieceType::Rook => self.can_move_rook(x, y),
+            PieceType::Bishop => self.can_move_bishop(x, y),
+            PieceType::Knight => self.can_move_knight(x, y),
+            PieceType::Pawn => self.can_move_pawn(x, y),
+        }
+    }
+
+    fn move_piece(&mut self, x: u8, y: u8) {
+        self.x = x;
+        self.y = y;
+    }
+}
+
 fn setup(
     mut commands: Commands,
     asset_server: Res<AssetServer>,
