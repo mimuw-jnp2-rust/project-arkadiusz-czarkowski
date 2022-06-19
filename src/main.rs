@@ -1,4 +1,7 @@
+// TODO position zdaje się w ogóle nie działać :(
+
 use bevy::prelude::*;
+use bevy_mod_picking::*;
 
 const IMAGE_SIZE: (f32, f32) = (45., 45.);
 
@@ -122,7 +125,8 @@ fn setup(
     };
     commands.insert_resource(game_textures);
 
-    commands.spawn_bundle(OrthographicCameraBundle::new_2d());
+    commands.spawn_bundle(OrthographicCameraBundle::new_2d())
+        .insert_bundle(PickingCameraBundle::default());
 }
 
 fn create_board(
@@ -137,7 +141,7 @@ fn create_board(
             spawn_tile(
                 &mut commands,
                 tile.clone(),
-                Vec3::new(i as f32 * IMAGE_SIZE.0, j as f32 * IMAGE_SIZE.1, 0.)
+                (i, j)
             );
         }
     }
@@ -151,7 +155,7 @@ fn create_pieces(
     spawn_piece(
         &mut commands,
         game_textures.kingl.clone(),
-        Vec3::new(4. * IMAGE_SIZE.0, 0., 1.),
+        (4, 0),
         PieceColor::White,
         PieceType::King,
     );
@@ -159,36 +163,36 @@ fn create_pieces(
     spawn_piece(
         &mut commands,
         game_textures.queenl.clone(),
-        Vec3::new(3. * IMAGE_SIZE.0, 0., 1.),
+        (3, 0),
         PieceColor::White,
         PieceType::Queen,
     );
     // rookl
-    for i in vec![0., 7.] {
+    for i in vec![0, 7] {
         spawn_piece(
             &mut commands,
             game_textures.rookl.clone(),
-            Vec3::new(i as f32 * IMAGE_SIZE.0, 0., 1.),
+            (i, 0),
             PieceColor::White,
             PieceType::Rook,
         );
     }
     // bishopl
-    for i in vec![2., 5.] {
+    for i in vec![2, 5] {
         spawn_piece(
             &mut commands,
             game_textures.bishopl.clone(),
-            Vec3::new(i as f32 * IMAGE_SIZE.0, 0., 1.),
+            (i, 0),
             PieceColor::White,
             PieceType::Bishop,
         );
     }
     // knightl
-    for i in vec![1., 6.] {
+    for i in vec![1, 6] {
         spawn_piece(
             &mut commands,
             game_textures.knightl.clone(),
-            Vec3::new(i as f32 * IMAGE_SIZE.0, 0., 1.),
+            (i, 0),
             PieceColor::White,
             PieceType::Knight,
         );
@@ -198,7 +202,7 @@ fn create_pieces(
         spawn_piece(
             &mut commands,
             game_textures.pawnl.clone(),
-            Vec3::new(i as f32 * IMAGE_SIZE.0, IMAGE_SIZE.1, 1.),
+            (i, 1),
             PieceColor::White,
             PieceType::Pawn,
         );
@@ -207,7 +211,7 @@ fn create_pieces(
     spawn_piece(
         &mut commands,
         game_textures.kingd.clone(),
-        Vec3::new(4. * IMAGE_SIZE.0, 7. * IMAGE_SIZE.1, 1.),
+        (4, 7),
         PieceColor::White,
         PieceType::King,
     );
@@ -215,36 +219,36 @@ fn create_pieces(
     spawn_piece(
         &mut commands,
         game_textures.queend.clone(),
-        Vec3::new(3. * IMAGE_SIZE.0, 7. * IMAGE_SIZE.1, 1.),
+        (3, 7),
         PieceColor::Black,
         PieceType::Queen,
     );
     // rookd
-    for i in vec![0., 7.] {
+    for i in vec![0, 7] {
         spawn_piece(
             &mut commands,
             game_textures.rookd.clone(),
-            Vec3::new(i as f32 * IMAGE_SIZE.0, 7. * IMAGE_SIZE.1, 1.),
+            (i, 7),
             PieceColor::Black,
             PieceType::Rook,
         );
     }
     // bishopd
-    for i in vec![2., 5.] {
+    for i in vec![2, 5] {
         spawn_piece(
             &mut commands,
             game_textures.bishopd.clone(),
-            Vec3::new(i as f32 * IMAGE_SIZE.0, 7. * IMAGE_SIZE.1, 1.),
+            (i, 7),
             PieceColor::Black,
             PieceType::Bishop,
         );
     }
     // knightd
-    for i in vec![1., 6.] {
+    for i in vec![1, 6] {
         spawn_piece(
             &mut commands,
             game_textures.knightd.clone(),
-            Vec3::new(i as f32 * IMAGE_SIZE.0, 7. * IMAGE_SIZE.1, 1.),
+            (i, 7),
             PieceColor::Black,
             PieceType::Knight,
         );
@@ -254,53 +258,58 @@ fn create_pieces(
         spawn_piece(
             &mut commands,
             game_textures.pawnd.clone(),
-            Vec3::new(i as f32 * IMAGE_SIZE.0, 6. * IMAGE_SIZE.1, 1.),
+            (i, 6),
             PieceColor::Black,
             PieceType::Pawn,
         );
     }
 }
 
+fn real_pos(position: (i8, i8)) -> Vec3 {
+    return Vec3::new(position.0 as f32 * IMAGE_SIZE.0, position.1 as f32 * IMAGE_SIZE.1, 0.);
+}
+
 fn spawn_tile(
     commands: &mut Commands,
     texture: Handle<Image>,
-    position: Vec3,
+    position: (i8, i8)
 ) {
     commands.spawn_bundle(SpriteBundle {
         texture,
         transform: Transform {
-            translation: position,
+            translation: real_pos(position),
             ..Default::default()
         },
         ..Default::default()
-    });
+    }).insert_bundle(PickableBundle::default());
 }
 
 fn spawn_piece(
     commands: &mut Commands,
     texture: Handle<Image>,
-    position: Vec3,
+    position: (i8, i8),
     color: PieceColor,
     piece_type: PieceType,
 ) {
     commands.spawn_bundle(SpriteBundle {
         texture,
         transform: Transform {
-            translation: position,
+            translation: real_pos(position) + Vec3::new(0., 0., 1.),
             ..Default::default()
         },
         ..Default::default()
     }).insert(Piece {
         color,
         piece_type,
-        x: position.x as i8,
-        y: position.y as i8,
+        x: position.0 as i8,
+        y: position.1 as i8,
     });
 }
 
 fn main() {
     App::new()
         .add_plugins(DefaultPlugins)
+        .add_plugins(DefaultPickingPlugins)
         .add_startup_system(setup)
         .add_startup_system_to_stage(StartupStage::PostStartup, create_board)
         .add_startup_system_to_stage(StartupStage::PostStartup, create_pieces)
