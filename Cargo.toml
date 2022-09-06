@@ -7,4 +7,3 @@ edition = "2021"
 
 [dependencies]
 bevy = { version = "0.7.0", features = ["dynamic"] } # remove the "dynamic" feature before release
-bevy_mod_picking = "0.7"
