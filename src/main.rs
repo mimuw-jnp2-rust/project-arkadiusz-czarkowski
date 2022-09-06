@@ -379,6 +379,7 @@ fn mouse_pressed_system(
     mpos: Res<MousePosition>,
     mut sel: ResMut<SelectedSquare>,
     query: Query<(Entity, &mut Piece, &mut Transform)>,
+    mut commands: Commands,
 ) {
     if buttons.just_pressed(MouseButton::Left) {
         eprintln!("huray!");
@@ -392,7 +393,7 @@ fn mouse_pressed_system(
                 );
 
                 // TODO dodać tu obsługę ruchów
-                move_piece(query, sel_pos, position);
+                move_piece(commands, query, sel_pos, position);
 
                 sel.position = None;
             }
@@ -412,11 +413,27 @@ fn mouse_pressed_system(
     }
 }
 
+fn delete_piece(
+    mut commands: Commands,
+    query: &mut Query<(Entity, &mut Piece, &mut Transform)>,
+    position: Position,
+) {
+    for (mut entity, mut piece, mut transform) in query.iter_mut() {
+        if Position(piece.x, piece.y) != position {
+            continue;
+        }
+        println!("papa :(");
+        commands.entity(entity).despawn();
+    }
+}
+
 fn move_piece(
+    mut commands: Commands,
     mut query: Query<(Entity, &mut Piece, &mut Transform)>,
     from: Position,
     to: Position,
 ) {
+    delete_piece(commands, &mut query, to);
     for (mut entity, mut piece, mut transform) in query.iter_mut() {
         if Position(piece.x, piece.y) != from {
             continue;
