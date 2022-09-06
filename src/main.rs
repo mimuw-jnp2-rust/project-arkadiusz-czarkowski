@@ -49,6 +49,9 @@ enum PieceType {
 	Pawn,
 }
 
+#[derive(Clone, Copy)]
+struct Position(i8, i8);
+
 #[derive(Component)]
 struct Piece {
 	color: PieceColor,
@@ -121,13 +124,18 @@ fn setup(
 		knightd: asset_server.load(KNIGHTD_SPRITE),
 		pawnd: asset_server.load(PAWND_SPRITE),
 	};
-	commands.insert_resource(game_textures);
+	commands
+        .insert_resource(game_textures);
 
-	commands.spawn_bundle(OrthographicCameraBundle::new_2d())
+	commands
+        .spawn_bundle(OrthographicCameraBundle::new_2d())
         .insert(MainCamera);
 
     commands
         .insert_resource(MousePosition { position: None });
+
+    commands
+        .insert_resource(SelectedSquare { position: None });
 }
 
 fn create_board(
@@ -142,7 +150,7 @@ fn create_board(
 			spawn_tile(
 				&mut commands,
 				tile.clone(),
-				(i, j)
+				Position(i, j)
 			);
 		}
 	}
@@ -156,7 +164,7 @@ fn create_pieces(
 	spawn_piece(
 		&mut commands,
 		game_textures.kingl.clone(),
-		(4, 0),
+		Position(4, 0),
 		PieceColor::White,
 		PieceType::King,
 	);
@@ -164,7 +172,7 @@ fn create_pieces(
 	spawn_piece(
 		&mut commands,
 		game_textures.queenl.clone(),
-		(3, 0),
+		Position(3, 0),
 		PieceColor::White,
 		PieceType::Queen,
 	);
@@ -173,7 +181,7 @@ fn create_pieces(
 		spawn_piece(
 			&mut commands,
 			game_textures.rookl.clone(),
-			(i, 0),
+			Position(i, 0),
 			PieceColor::White,
 			PieceType::Rook,
 		);
@@ -183,7 +191,7 @@ fn create_pieces(
 		spawn_piece(
 			&mut commands,
 			game_textures.bishopl.clone(),
-			(i, 0),
+			Position(i, 0),
 			PieceColor::White,
 			PieceType::Bishop,
 		);
@@ -193,7 +201,7 @@ fn create_pieces(
 		spawn_piece(
 			&mut commands,
 			game_textures.knightl.clone(),
-			(i, 0),
+			Position(i, 0),
 			PieceColor::White,
 			PieceType::Knight,
 		);
@@ -203,7 +211,7 @@ fn create_pieces(
 		spawn_piece(
 			&mut commands,
 			game_textures.pawnl.clone(),
-			(i, 1),
+			Position(i, 1),
 			PieceColor::White,
 			PieceType::Pawn,
 		);
@@ -212,7 +220,7 @@ fn create_pieces(
 	spawn_piece(
 		&mut commands,
 		game_textures.kingd.clone(),
-		(4, 7),
+		Position(4, 7),
 		PieceColor::White,
 		PieceType::King,
 	);
@@ -220,7 +228,7 @@ fn create_pieces(
 	spawn_piece(
 		&mut commands,
 		game_textures.queend.clone(),
-		(3, 7),
+		Position(3, 7),
 		PieceColor::Black,
 		PieceType::Queen,
 	);
@@ -229,7 +237,7 @@ fn create_pieces(
 		spawn_piece(
 			&mut commands,
 			game_textures.rookd.clone(),
-			(i, 7),
+			Position(i, 7),
 			PieceColor::Black,
 			PieceType::Rook,
 		);
@@ -239,7 +247,7 @@ fn create_pieces(
 		spawn_piece(
 			&mut commands,
 			game_textures.bishopd.clone(),
-			(i, 7),
+			Position(i, 7),
 			PieceColor::Black,
 			PieceType::Bishop,
 		);
@@ -249,7 +257,7 @@ fn create_pieces(
 		spawn_piece(
 			&mut commands,
 			game_textures.knightd.clone(),
-			(i, 7),
+			Position(i, 7),
 			PieceColor::Black,
 			PieceType::Knight,
 		);
@@ -259,20 +267,20 @@ fn create_pieces(
 		spawn_piece(
 			&mut commands,
 			game_textures.pawnd.clone(),
-			(i, 6),
+			Position(i, 6),
 			PieceColor::Black,
 			PieceType::Pawn,
 		);
 	}
 }
 
-fn real_pos(position: (i8, i8)) -> Vec3 {
+fn real_pos(position: Position) -> Vec3 {
 	return Vec3::new((position.0 as f32 - 3.5) * IMAGE_SIZE.0,
                     (position.1 as f32 - 3.5) * IMAGE_SIZE.1,
                     0.);
 }
 
-fn game_pos(vec: Vec3) -> Option<(i8, i8)> {
+fn game_pos(vec: Vec3) -> Option<Position> {
     let (mut x, mut y) = (vec.x, vec.y);
     x += 3.5 * IMAGE_SIZE.0;
     y += 3.5 * IMAGE_SIZE.1;
@@ -284,14 +292,14 @@ fn game_pos(vec: Vec3) -> Option<(i8, i8)> {
         None
     }
     else {
-        Some((x as i8, y as i8))
+        Some(Position(x as i8, y as i8))
     }
 }
 
 fn spawn_tile(
 	commands: &mut Commands,
 	texture: Handle<Image>,
-	position: (i8, i8)
+	position: Position
 ) {
 	commands.spawn_bundle(SpriteBundle {
 		texture,
@@ -306,7 +314,7 @@ fn spawn_tile(
 fn spawn_piece(
 	commands: &mut Commands,
 	texture: Handle<Image>,
-	position: (i8, i8),
+	position: Position,
 	color: PieceColor,
 	piece_type: PieceType,
 ) {
@@ -325,22 +333,17 @@ fn spawn_piece(
 	});
 }
 
-struct SelectedSquare { // TODO zrobić coś z tym
-    entity: Option<Entity>,
-}
-
-/// Used to help identify our main camera
 #[derive(Component)]
 struct MainCamera;
 
 struct MousePosition {
-    position: Option<(i8, i8)>,
+    position: Option<Position>,
 }
 
-fn cursor_system(
+fn cursor_position_system(
     wnds: Res<Windows>,
     mut mpos: ResMut<MousePosition>,
-    q_camera: Query<(&Camera, &GlobalTransform), With<MainCamera>>
+    q_camera: Query<(&Camera, &GlobalTransform), With<MainCamera>>,
 ) {
     let (camera, camera_transform) = q_camera.single();
 
@@ -360,11 +363,44 @@ fn cursor_system(
         let world_pos = ndc_to_world.project_point3(ndc.extend(-1.0));
 
         mpos.position = game_pos(world_pos);
-        if let Some((x, y)) = mpos.position {
-            eprintln!("(x, y) = ({}, {})", x, y);
-        }
+    }
+}
 
-        eprintln!("World coords: {}/{}", world_pos.x, world_pos.y);
+struct SelectedSquare {
+    position: Option<Position>,
+}
+
+fn mouse_pressed_system(
+    buttons: Res<Input<MouseButton>>,
+    mpos: Res<MousePosition>,
+    mut sel: ResMut<SelectedSquare>,
+) {
+    if buttons.just_pressed(MouseButton::Left) {
+        eprintln!("huray!");
+        if let Some(position) = mpos.position {
+            if let Some(sel_pos) = sel.position { // a move from sel_pos to position
+                eprintln!("a move is happening from ({}, {}) to ({}, {})",
+                sel_pos.0,
+                sel_pos.1,
+                position.0,
+                position.1
+                );
+                // TODO dodać tu obsługę ruchów
+                sel.position = None;
+            }
+            else {
+                sel.position = mpos.position;
+            }
+        }
+        else {
+            sel.position = None;
+        }
+        if let Some(position) = sel.position {
+            eprintln!("Some({}, {})", position.0, position.1);
+        }
+        else {
+            eprintln!("None");
+        }
     }
 }
 
@@ -374,6 +410,7 @@ fn main() {
 		.add_startup_system(setup)
 		.add_startup_system_to_stage(StartupStage::PostStartup, create_board)
 		.add_startup_system_to_stage(StartupStage::PostStartup, create_pieces)
-        .add_system(cursor_system)
+        .add_system(cursor_position_system)
+        .add_system(mouse_pressed_system)
 		.run();
 }
