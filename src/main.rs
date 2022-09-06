@@ -49,7 +49,7 @@ enum PieceType {
 	Pawn,
 }
 
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, PartialEq)]
 struct Position(i8, i8);
 
 #[derive(Component)]
@@ -280,6 +280,10 @@ fn real_pos(position: Position) -> Vec3 {
                     0.);
 }
 
+fn real_piece_pos(position: Position) -> Vec3 {
+    return real_pos(position) + Vec3::new(0., 0., 1.);
+}
+
 fn game_pos(vec: Vec3) -> Option<Position> {
     let (mut x, mut y) = (vec.x, vec.y);
     x += 3.5 * IMAGE_SIZE.0;
@@ -321,7 +325,7 @@ fn spawn_piece(
 	commands.spawn_bundle(SpriteBundle {
 		texture,
 		transform: Transform {
-			translation: real_pos(position) + Vec3::new(0., 0., 1.),
+			translation: real_piece_pos(position),
 			..Default::default()
 		},
 		..Default::default()
@@ -374,6 +378,7 @@ fn mouse_pressed_system(
     buttons: Res<Input<MouseButton>>,
     mpos: Res<MousePosition>,
     mut sel: ResMut<SelectedSquare>,
+    query: Query<(Entity, &mut Piece, &mut Transform)>,
 ) {
     if buttons.just_pressed(MouseButton::Left) {
         eprintln!("huray!");
@@ -385,7 +390,10 @@ fn mouse_pressed_system(
                 position.0,
                 position.1
                 );
+
                 // TODO dodać tu obsługę ruchów
+                move_piece(query, sel_pos, position);
+
                 sel.position = None;
             }
             else {
@@ -401,6 +409,22 @@ fn mouse_pressed_system(
         else {
             eprintln!("None");
         }
+    }
+}
+
+fn move_piece(
+    mut query: Query<(Entity, &mut Piece, &mut Transform)>,
+    from: Position,
+    to: Position,
+) {
+    for (mut entity, mut piece, mut transform) in query.iter_mut() {
+        if Position(piece.x, piece.y) != from {
+            continue;
+        }
+        println!("hejo!");
+        piece.x = to.0;
+        piece.y = to.1;
+        transform.translation = real_piece_pos(to);
     }
 }
 
