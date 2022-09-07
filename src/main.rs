@@ -1,6 +1,7 @@
-use std::collections::HashMap;
 use bevy::prelude::*;
 use bevy::render::camera::RenderTarget;
+use rand::seq::SliceRandom;
+use std::collections::HashMap;
 
 const INFINITY: f32 = 1000000.;
 const SCALING_FACTOR: f32 = 1.5;
@@ -83,74 +84,143 @@ impl Piece {
             PieceColor::Black => -value,
         }
     }
-    fn can_move_king(&self, x: i8, y: i8) -> bool {
-        i8::abs(self.x - x) <= 1 && i8::abs(self.y - y) <= 1
-    }
-
-    fn can_move_queen(&self, x: i8, y: i8) -> bool {
-        self.can_move_rook(x, y) || self.can_move_bishop(x, y)
-    }
-
-    fn can_move_rook(&self, x: i8, y: i8) -> bool {
-        self.x == x || self.y == y
-    }
-
-    fn can_move_bishop(&self, x: i8, y: i8) -> bool {
-        i8::abs(self.x - x) == i8::abs(self.y - y)
-    }
-
-    fn can_move_knight(&self, x: i8, y: i8) -> bool {
-        (i8::abs(self.x - x) == 1 && i8::abs(self.y - y) == 2)
-            || (i8::abs(self.x - x) == 2 && i8::abs(self.y - y) == 1)
-    }
-
-    fn can_move_pawn(&self, x: i8, y: i8) -> bool {
-        true
-    }
-
-    fn can_move(&self, x: i8, y: i8) -> bool {
-        // ignores attacks on the king and pins
-        // add a check for the square being occupied by a piece of the same color
-        match self.piece_type {
-            PieceType::King => self.can_move_king(x, y),
-            PieceType::Queen => self.can_move_queen(x, y),
-            PieceType::Rook => self.can_move_rook(x, y),
-            PieceType::Bishop => self.can_move_bishop(x, y),
-            PieceType::Knight => self.can_move_knight(x, y),
-            PieceType::Pawn => self.can_move_pawn(x, y),
+    fn is_legal(&self, x: i8, y: i8, board: Board) -> bool {
+        if !(0..8).contains(&x) || !(0..8).contains(&y) {
+            return false;
+        }
+        if let Some(piece) = board[x as usize][y as usize] {
+            self.piece_color != piece.piece_color
+        } else {
+            true
         }
     }
+    fn is_capture(&self, x: i8, y: i8, board: Board) -> bool {
+        board[x as usize][y as usize].is_some()
+    }
+    fn gen_consecutive(&self, board: Board, diffs: Vec<(i8, i8)>) -> Vec<Move> {
+        let mut legal_moves = Vec::new();
+        for (dx, dy) in diffs {
+            let mut x = self.x + dx;
+            let mut y = self.y + dy;
+            while self.is_legal(x, y, board) {
+                legal_moves.push((Position(self.x, self.y), Position(x, y)));
+                if self.is_capture(x, y, board) {
+                    break;
+                }
+                x += dx;
+                y += dy;
+            }
+        }
+        legal_moves
+    }
+    fn gen_rook(&self, board: Board) -> Vec<Move> {
+        self.gen_consecutive(board, vec![(1, 0), (-1, 0), (0, 1), (0, -1)])
+    }
+    fn gen_bishop(&self, board: Board) -> Vec<Move> {
+        self.gen_consecutive(board, vec![(1, 1), (1, -1), (-1, 1), (-1, -1)])
+    }
+    fn gen_legal_moves(&self, board: Board) -> Vec<Move> {
+        let mut legal_moves: Vec<Move> = Vec::new();
 
+        match self.piece_type {
+            PieceType::King => {
+                for dx in -1..=1 {
+                    for dy in -1..=1 {
+                        if self.is_legal(self.x + dx, self.y + dy, board) {
+                            legal_moves.push((
+                                Position(self.x, self.y),
+                                Position(self.x + dx, self.y + dy),
+                            ));
+                        }
+                    }
+                }
+            }
+            PieceType::Queen => {
+                legal_moves.append(&mut self.gen_rook(board));
+                legal_moves.append(&mut self.gen_bishop(board));
+            }
+            PieceType::Rook => {
+                legal_moves.append(&mut self.gen_rook(board));
+            }
+            PieceType::Bishop => {
+                legal_moves.append(&mut self.gen_bishop(board));
+            }
+            PieceType::Knight => {
+                for dx in -2..=2 {
+                    for dy in -2..=2 {
+                        if i8::abs(dx * dy) == 2 && self.is_legal(self.x + dx, self.y + dy, board) {
+                            legal_moves.push((
+                                Position(self.x, self.y),
+                                Position(self.x + dx, self.y + dy),
+                            ));
+                        }
+                    }
+                }
+            }
+            PieceType::Pawn => {
+                let dir = match self.piece_color {
+                    PieceColor::White => 1,
+                    PieceColor::Black => -1,
+                };
+                for dx in &[-1, 1] {
+                    if self.is_legal(self.x + dx, self.y + dir, board)
+                        && self.is_capture(self.x + dx, self.y + dir, board)
+                    {
+                        legal_moves.push((
+                            Position(self.x, self.y),
+                            Position(self.x + dx, self.y + dir),
+                        ));
+                    }
+                }
+                if self.is_legal(self.x, self.y + dir, board)
+                    && !self.is_capture(self.x, self.y + dir, board)
+                {
+                    legal_moves.push((Position(self.x, self.y), Position(self.x, self.y + dir)));
+                    if self.y == (-25 * dir + 35) / 10
+                        && self.is_legal(self.x, self.y + 2 * dir, board)
+                        && !self.is_capture(self.x, self.y + 2 * dir, board)
+                    {
+                        legal_moves
+                            .push((Position(self.x, self.y), Position(self.x, self.y + 2 * dir)));
+                    }
+                }
+            }
+        }
+        legal_moves
+    }
     fn move_piece(&mut self, x: i8, y: i8) {
         self.x = x;
         self.y = y;
     }
 }
 
+type Board = [[Option<Piece>; 8]; 8];
+
 #[derive(Clone, PartialEq, Eq, Hash)]
 struct GameState {
-    board: [[Option<Piece>; 8]; 8], // może zmienić na HashSet indeksowany Position
+    board: Board, // może zmienić na HashSet indeksowany Position
     now_moves: PieceColor,
     player_moves: bool,
 }
 
-struct Move(Position, Position);
+type Move = (Position, Position);
+//struct Move(Position, Position);
 
 impl GameState {
+    // TODO check whether both kings exits or immediately return +-INF
     // TODO work on this function, add alfa-beta later
     fn evaluate(&self, level: u32, cache: &mut HashMap<(GameState, u32), f32>) -> f32 {
         let key = (self.clone(), level);
         if let Some(x) = cache.get(&key) {
             *x
-        }
-        else {
+        } else {
             let value = if level > 0 {
                 let mut score = match self.now_moves {
-                    PieceColor::White => -INFINITY,
-                    PieceColor::Black => INFINITY,
+                    PieceColor::White => -2. * INFINITY,
+                    PieceColor::Black => 2. * INFINITY,
                 };
-                for Move(from, to) in self.gen_legal_moves() {
-                    println!("(level, from, to) = ({:?}, {:?}, {:?})", level, from, to);
+                for (from, to) in self.gen_legal_moves() {
+                    //println!("(level, from, to) = ({:?}, {:?}, {:?})", level, from, to);
                     let mut next_state = self.clone();
                     next_state.move_piece(from, to);
                     let next_state_score = next_state.evaluate(level - 1, cache);
@@ -160,14 +230,13 @@ impl GameState {
                     };
                 }
                 score
-            }
-            else {
+            } else {
                 let mut score = 0.;
                 for i in 0..8 {
                     for j in 0..8 {
                         if let Some(x) = self.board[i][j] {
                             score += x.value();
-                            println!("ss: {}", score)
+                            //println!("ss: {}", score)
                         }
                     }
                 }
@@ -178,12 +247,19 @@ impl GameState {
         }
     }
     fn gen_legal_moves(&self) -> Vec<Move> {
-        vec![]
+        let mut legal_moves = Vec::new();
+        for i in 0..8 {
+            for j in 0..8 {
+                if let Some(piece) = self.board[i][j] {
+                    if piece.piece_color == self.now_moves {
+                        legal_moves.append(&mut piece.gen_legal_moves(self.board));
+                    }
+                }
+            }
+        }
+        legal_moves
     }
-    fn move_piece(&mut self,
-                  from: Position,
-                  to: Position,
-    ) {
+    fn move_piece(&mut self, from: Position, to: Position) {
         let piece = self.board[from.0 as usize][from.1 as usize].take();
         assert!(piece.is_some());
         let mut piece = piece.unwrap();
@@ -212,13 +288,11 @@ impl GameState {
         from: Position,
         to: Position,
     ) {
-        if !self.player_moves {
+        if !self.player_moves || !self.gen_legal_moves().contains(&(from, to)) {
             return;
         }
-
         self.move_piece_for_real(commands, query, from, to);
     }
-    // TODO add sth to this function or delete it
     fn computer_move(
         &mut self,
         commands: &mut Commands,
@@ -226,9 +300,9 @@ impl GameState {
         from: Position,
         to: Position,
     ) {
+        assert!(!self.player_moves && self.gen_legal_moves().contains(&(from, to)));
         self.move_piece_for_real(commands, query, from, to);
     }
-    // TODO add more functions
 }
 
 fn setup(mut commands: Commands, asset_server: Res<AssetServer>) {
@@ -623,18 +697,35 @@ fn move_piece_physically(
 }
 
 fn computer_moves_system(
+    mut commands: Commands,
+    query: Query<(Entity, &mut Position, &mut Transform)>,
     mut game_state: ResMut<GameState>,
 ) {
     if game_state.player_moves {
         return;
     }
-    let mut cache = HashMap::<(GameState, u32), f32>::new();
-    let score = game_state.evaluate(3, &mut cache);
-    let score2 = game_state.evaluate(0, &mut cache);
-    println!("Score: {}", score);
-    println!("Score2: {}", score2);
-
     eprintln!("Thinking ...");
+    let mut cache = HashMap::<(GameState, u32), f32>::new();
+    let depth = 4;
+    let score = game_state.evaluate(depth, &mut cache);
+    println!("Score: {}", score);
+    println!("Cache size: {}", cache.len());
+    // TODO check whethe the score if +-INF
+    let possible_moves = game_state.gen_legal_moves();
+    let good_moves = possible_moves
+        .into_iter()
+        .filter(|(from, to)| {
+            let mut next_state = game_state.clone();
+            next_state.move_piece(*from, *to);
+            let next_state_score = next_state.evaluate(depth - 1, &mut cache);
+            score == next_state_score
+        })
+        .collect::<Vec<Move>>();
+    println!("good moves: {:?}", good_moves);
+
+    let computer_move = good_moves.choose(&mut rand::thread_rng()).unwrap(); // TODO przemyśleć to unwrap
+
+    game_state.computer_move(&mut commands, query, computer_move.0, computer_move.1);
 }
 
 fn main() {
