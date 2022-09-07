@@ -21,37 +21,37 @@ const PAWND_SPRITE: &str = "sprites/pd.png";
 const HIGHLIGHT_SPRITE: &str = "sprites/highlight.png";
 
 struct GameTextures {
-	tilel: Handle<Image>,
-	kingl: Handle<Image>,
-	queenl: Handle<Image>,
-	rookl: Handle<Image>,
-	bishopl: Handle<Image>,
-	knightl: Handle<Image>,
-	pawnl: Handle<Image>,
-	tiled: Handle<Image>,
-	kingd: Handle<Image>,
-	queend: Handle<Image>,
-	rookd: Handle<Image>,
-	bishopd: Handle<Image>,
-	knightd: Handle<Image>,
-	pawnd: Handle<Image>,
+    tilel: Handle<Image>,
+    kingl: Handle<Image>,
+    queenl: Handle<Image>,
+    rookl: Handle<Image>,
+    bishopl: Handle<Image>,
+    knightl: Handle<Image>,
+    pawnl: Handle<Image>,
+    tiled: Handle<Image>,
+    kingd: Handle<Image>,
+    queend: Handle<Image>,
+    rookd: Handle<Image>,
+    bishopd: Handle<Image>,
+    knightd: Handle<Image>,
+    pawnd: Handle<Image>,
     highlight: Handle<Image>,
 }
 
 #[derive(Clone, Copy, PartialEq)]
 enum PieceColor {
-	White,
-	Black,
+    White,
+    Black,
 }
 
 #[derive(Clone, Copy, PartialEq)]
 enum PieceType {
-	King,
-	Queen,
-	Bishop,
-	Knight,
-	Rook,
-	Pawn,
+    King,
+    Queen,
+    Bishop,
+    Knight,
+    Rook,
+    Pawn,
 }
 
 #[derive(Clone, Copy, PartialEq, Component)]
@@ -59,57 +59,59 @@ struct Position(i8, i8);
 
 #[derive(Clone, Copy, PartialEq, Component)]
 struct Piece {
-	color: PieceColor,
-	piece_type: PieceType,
-	x: i8,
-	y: i8,
+    color: PieceColor,
+    piece_type: PieceType,
+    x: i8,
+    y: i8,
 }
 
 impl Piece {
-    fn value(&self) -> f32 { // TODO work on this function, maybe add position as arguments and maybe some other variables as well
+    fn value(&self) -> f32 {
+        // TODO work on this function, maybe add position as arguments and maybe some other variables as well
         1.
     }
-	fn can_move_king(&self, x: i8, y: i8) -> bool {
-		i8::abs(self.x - x) <= 1 && i8::abs(self.y - y) <= 1
-	}
+    fn can_move_king(&self, x: i8, y: i8) -> bool {
+        i8::abs(self.x - x) <= 1 && i8::abs(self.y - y) <= 1
+    }
 
-	fn can_move_queen(&self, x: i8, y: i8) -> bool {
-		self.can_move_rook(x, y) || self.can_move_bishop(x, y)
-	}
+    fn can_move_queen(&self, x: i8, y: i8) -> bool {
+        self.can_move_rook(x, y) || self.can_move_bishop(x, y)
+    }
 
-	fn can_move_rook(&self, x: i8, y: i8) -> bool {
-		true
-	}
+    fn can_move_rook(&self, x: i8, y: i8) -> bool {
+        true
+    }
 
-	fn can_move_bishop(&self, x: i8, y: i8) -> bool {
-		true
-	}
+    fn can_move_bishop(&self, x: i8, y: i8) -> bool {
+        true
+    }
 
-	fn can_move_knight(&self, x: i8, y: i8) -> bool {
-		(i8::abs(self.x - x) == 1 && i8::abs(self.y - y) == 2)
-			|| (i8::abs(self.x - x) == 2 && i8::abs(self.y - y) == 1)
-	}
+    fn can_move_knight(&self, x: i8, y: i8) -> bool {
+        (i8::abs(self.x - x) == 1 && i8::abs(self.y - y) == 2)
+            || (i8::abs(self.x - x) == 2 && i8::abs(self.y - y) == 1)
+    }
 
-	fn can_move_pawn(&self, x: i8, y: i8) -> bool {
-		true
-	}
+    fn can_move_pawn(&self, x: i8, y: i8) -> bool {
+        true
+    }
 
-	fn can_move(&self, x: i8, y: i8) -> bool { // ignores attacks on the king and pins
-		// add a check for the square being occupied by a piece of the same color
-		match self.piece_type {
-			PieceType::King => self.can_move_king(x, y),
-			PieceType::Queen => self.can_move_queen(x, y),
-			PieceType::Rook => self.can_move_rook(x, y),
-			PieceType::Bishop => self.can_move_bishop(x, y),
-			PieceType::Knight => self.can_move_knight(x, y),
-			PieceType::Pawn => self.can_move_pawn(x, y),
-		}
-	}
+    fn can_move(&self, x: i8, y: i8) -> bool {
+        // ignores attacks on the king and pins
+        // add a check for the square being occupied by a piece of the same color
+        match self.piece_type {
+            PieceType::King => self.can_move_king(x, y),
+            PieceType::Queen => self.can_move_queen(x, y),
+            PieceType::Rook => self.can_move_rook(x, y),
+            PieceType::Bishop => self.can_move_bishop(x, y),
+            PieceType::Knight => self.can_move_knight(x, y),
+            PieceType::Pawn => self.can_move_pawn(x, y),
+        }
+    }
 
-	fn move_piece(&mut self, x: i8, y: i8) {
-		self.x = x;
-		self.y = y;
-	}
+    fn move_piece(&mut self, x: i8, y: i8) {
+        self.x = x;
+        self.y = y;
+    }
 }
 
 #[derive(PartialEq)] // chyba zmienić to na Hash
@@ -119,194 +121,179 @@ struct GameState {
 }
 
 impl GameState {
-    fn evaluate(&self) -> f32 { // TODO work on this function
+    fn evaluate(&self) -> f32 {
+        // TODO work on this function
         0.
     }
     // TODO add more functions
 }
 
-fn setup(
-	mut commands: Commands,
-	asset_server: Res<AssetServer>,
-) {
-	let game_textures = GameTextures {
-		tilel: asset_server.load(TILEL_SPRITE),
-		kingl: asset_server.load(KINGL_SPRITE),
-		queenl: asset_server.load(QUEENL_SPRITE),
-		rookl: asset_server.load(ROOKL_SPRITE),
-		bishopl: asset_server.load(BISHOPL_SPRITE),
-		knightl: asset_server.load(KNIGHTL_SPRITE),
-		pawnl: asset_server.load(PAWNL_SPRITE),
-		tiled: asset_server.load(TILED_SPRITE),
-		kingd: asset_server.load(KINGD_SPRITE),
-		queend: asset_server.load(QUEEND_SPRITE),
-		rookd: asset_server.load(ROOKD_SPRITE),
-		bishopd: asset_server.load(BISHOPD_SPRITE),
-		knightd: asset_server.load(KNIGHTD_SPRITE),
-		pawnd: asset_server.load(PAWND_SPRITE),
+fn setup(mut commands: Commands, asset_server: Res<AssetServer>) {
+    let game_textures = GameTextures {
+        tilel: asset_server.load(TILEL_SPRITE),
+        kingl: asset_server.load(KINGL_SPRITE),
+        queenl: asset_server.load(QUEENL_SPRITE),
+        rookl: asset_server.load(ROOKL_SPRITE),
+        bishopl: asset_server.load(BISHOPL_SPRITE),
+        knightl: asset_server.load(KNIGHTL_SPRITE),
+        pawnl: asset_server.load(PAWNL_SPRITE),
+        tiled: asset_server.load(TILED_SPRITE),
+        kingd: asset_server.load(KINGD_SPRITE),
+        queend: asset_server.load(QUEEND_SPRITE),
+        rookd: asset_server.load(ROOKD_SPRITE),
+        bishopd: asset_server.load(BISHOPD_SPRITE),
+        knightd: asset_server.load(KNIGHTD_SPRITE),
+        pawnd: asset_server.load(PAWND_SPRITE),
         highlight: asset_server.load(HIGHLIGHT_SPRITE),
-	};
-	commands
-        .insert_resource(game_textures);
+    };
+    commands.insert_resource(game_textures);
 
-	commands
+    commands
         .spawn_bundle(OrthographicCameraBundle::new_2d())
         .insert(MainCamera);
 
-    commands
-        .insert_resource(MousePosition { position: None });
+    commands.insert_resource(MousePosition { position: None });
 
-    commands
-        .insert_resource(SelectedSquare { position: None });
+    commands.insert_resource(SelectedSquare { position: None });
 
-    commands
-        .insert_resource(GameState {
-            board: [[None; 8]; 8],
-            now_moves: PieceColor::White,
-        });
+    commands.insert_resource(GameState {
+        board: [[None; 8]; 8],
+        now_moves: PieceColor::White,
+    });
 }
 
-fn create_board(
-	mut commands: Commands,
-	game_textures: Res<GameTextures>,
-) {
-	let tilel = game_textures.tilel.clone();
-	let tiled = game_textures.tiled.clone();
-	for i in 0..8 {
-		for j in 0..8 {
-			let tile = if (i + j) % 2 == 0 { &tiled } else { &tilel };
-			spawn_tile(
-				&mut commands,
-				tile.clone(),
-				Position(i, j),
-                false,
-			);
-		}
-	}
+fn create_board(mut commands: Commands, game_textures: Res<GameTextures>) {
+    let tilel = game_textures.tilel.clone();
+    let tiled = game_textures.tiled.clone();
+    for i in 0..8 {
+        for j in 0..8 {
+            let tile = if (i + j) % 2 == 0 { &tiled } else { &tilel };
+            spawn_tile(&mut commands, tile.clone(), Position(i, j), false);
+        }
+    }
 }
 
-fn create_pieces(
-	mut commands: Commands,
-	game_textures: Res<GameTextures>,
-) {
-	// kingl
-	spawn_piece(
-		&mut commands,
-		game_textures.kingl.clone(),
-		Position(4, 0),
-		PieceColor::White,
-		PieceType::King,
-	);
-	// queenl
-	spawn_piece(
-		&mut commands,
-		game_textures.queenl.clone(),
-		Position(3, 0),
-		PieceColor::White,
-		PieceType::Queen,
-	);
-	// rookl
-	for i in &[0, 7] {
-		spawn_piece(
-			&mut commands,
-			game_textures.rookl.clone(),
-			Position(*i, 0),
-			PieceColor::White,
-			PieceType::Rook,
-		);
-	}
-	// bishopl
-	for i in &[2, 5] {
-		spawn_piece(
-			&mut commands,
-			game_textures.bishopl.clone(),
-			Position(*i, 0),
-			PieceColor::White,
-			PieceType::Bishop,
-		);
-	}
-	// knightl
-	for i in &[1, 6] {
-		spawn_piece(
-			&mut commands,
-			game_textures.knightl.clone(),
-			Position(*i, 0),
-			PieceColor::White,
-			PieceType::Knight,
-		);
-	}
-	// pawnl
-	for i in 0..8 {
-		spawn_piece(
-			&mut commands,
-			game_textures.pawnl.clone(),
-			Position(i, 1),
-			PieceColor::White,
-			PieceType::Pawn,
-		);
-	}
-	// kingd
-	spawn_piece(
-		&mut commands,
-		game_textures.kingd.clone(),
-		Position(4, 7),
-		PieceColor::White,
-		PieceType::King,
-	);
-	// queend
-	spawn_piece(
-		&mut commands,
-		game_textures.queend.clone(),
-		Position(3, 7),
-		PieceColor::Black,
-		PieceType::Queen,
-	);
-	// rookd
-	for i in &[0, 7] {
-		spawn_piece(
-			&mut commands,
-			game_textures.rookd.clone(),
-			Position(*i, 7),
-			PieceColor::Black,
-			PieceType::Rook,
-		);
-	}
-	// bishopd
-	for i in &[2, 5] {
-		spawn_piece(
-			&mut commands,
-			game_textures.bishopd.clone(),
-			Position(*i, 7),
-			PieceColor::Black,
-			PieceType::Bishop,
-		);
-	}
-	// knightd
-	for i in &[1, 6] {
-		spawn_piece(
-			&mut commands,
-			game_textures.knightd.clone(),
-			Position(*i, 7),
-			PieceColor::Black,
-			PieceType::Knight,
-		);
-	}
-	// pawnd
-	for i in 0..8 {
-		spawn_piece(
-			&mut commands,
-			game_textures.pawnd.clone(),
-			Position(i, 6),
-			PieceColor::Black,
-			PieceType::Pawn,
-		);
-	}
+fn create_pieces(mut commands: Commands, game_textures: Res<GameTextures>) {
+    // kingl
+    spawn_piece(
+        &mut commands,
+        game_textures.kingl.clone(),
+        Position(4, 0),
+        PieceColor::White,
+        PieceType::King,
+    );
+    // queenl
+    spawn_piece(
+        &mut commands,
+        game_textures.queenl.clone(),
+        Position(3, 0),
+        PieceColor::White,
+        PieceType::Queen,
+    );
+    // rookl
+    for i in &[0, 7] {
+        spawn_piece(
+            &mut commands,
+            game_textures.rookl.clone(),
+            Position(*i, 0),
+            PieceColor::White,
+            PieceType::Rook,
+        );
+    }
+    // bishopl
+    for i in &[2, 5] {
+        spawn_piece(
+            &mut commands,
+            game_textures.bishopl.clone(),
+            Position(*i, 0),
+            PieceColor::White,
+            PieceType::Bishop,
+        );
+    }
+    // knightl
+    for i in &[1, 6] {
+        spawn_piece(
+            &mut commands,
+            game_textures.knightl.clone(),
+            Position(*i, 0),
+            PieceColor::White,
+            PieceType::Knight,
+        );
+    }
+    // pawnl
+    for i in 0..8 {
+        spawn_piece(
+            &mut commands,
+            game_textures.pawnl.clone(),
+            Position(i, 1),
+            PieceColor::White,
+            PieceType::Pawn,
+        );
+    }
+    // kingd
+    spawn_piece(
+        &mut commands,
+        game_textures.kingd.clone(),
+        Position(4, 7),
+        PieceColor::White,
+        PieceType::King,
+    );
+    // queend
+    spawn_piece(
+        &mut commands,
+        game_textures.queend.clone(),
+        Position(3, 7),
+        PieceColor::Black,
+        PieceType::Queen,
+    );
+    // rookd
+    for i in &[0, 7] {
+        spawn_piece(
+            &mut commands,
+            game_textures.rookd.clone(),
+            Position(*i, 7),
+            PieceColor::Black,
+            PieceType::Rook,
+        );
+    }
+    // bishopd
+    for i in &[2, 5] {
+        spawn_piece(
+            &mut commands,
+            game_textures.bishopd.clone(),
+            Position(*i, 7),
+            PieceColor::Black,
+            PieceType::Bishop,
+        );
+    }
+    // knightd
+    for i in &[1, 6] {
+        spawn_piece(
+            &mut commands,
+            game_textures.knightd.clone(),
+            Position(*i, 7),
+            PieceColor::Black,
+            PieceType::Knight,
+        );
+    }
+    // pawnd
+    for i in 0..8 {
+        spawn_piece(
+            &mut commands,
+            game_textures.pawnd.clone(),
+            Position(i, 6),
+            PieceColor::Black,
+            PieceType::Pawn,
+        );
+    }
 }
 
 fn real_pos(position: Position) -> Vec3 {
-	Vec3::new((position.0 as f32 - 3.5) * IMAGE_SIZE.0,
-                (position.1 as f32 - 3.5) * IMAGE_SIZE.1,
-                0.)
+    Vec3::new(
+        (position.0 as f32 - 3.5) * IMAGE_SIZE.0,
+        (position.1 as f32 - 3.5) * IMAGE_SIZE.1,
+        0.,
+    )
 }
 
 fn real_piece_pos(position: Position) -> Vec3 {
@@ -323,8 +310,7 @@ fn game_pos(vec: Vec3) -> Option<Position> {
     y = y.round();
     if x < 0.0 || y < 0.0 || x >= 8.0 || y >= 8.0 {
         None
-    }
-    else {
+    } else {
         Some(Position(x as i8, y as i8))
     }
 }
@@ -333,14 +319,14 @@ fn game_pos(vec: Vec3) -> Option<Position> {
 struct Highlight {}
 
 fn spawn_tile(
-	commands: &mut Commands,
-	texture: Handle<Image>,
-	position: Position,
+    commands: &mut Commands,
+    texture: Handle<Image>,
+    position: Position,
     highlight: bool,
 ) {
     let mut transform = Transform {
-			translation: real_pos(position),
-			..Default::default()
+        translation: real_pos(position),
+        ..Default::default()
     };
     transform.scale *= SCALING_FACTOR;
     let mut sprite = SpriteBundle {
@@ -351,53 +337,53 @@ fn spawn_tile(
     if highlight {
         sprite.transform.translation += Vec3::new(0., 0., 0.5);
         sprite.sprite.color.set_a(0.7);
-        commands.spawn_bundle(sprite)
-            .insert(Highlight {});
-    }
-    else {
+        commands.spawn_bundle(sprite).insert(Highlight {});
+    } else {
         commands.spawn_bundle(sprite);
     }
 }
 
 fn spawn_piece(
-	commands: &mut Commands,
-	texture: Handle<Image>,
-	position: Position,
-	color: PieceColor,
-	piece_type: PieceType,
+    commands: &mut Commands,
+    texture: Handle<Image>,
+    position: Position,
+    color: PieceColor,
+    piece_type: PieceType,
 ) {
     let mut transform = Transform {
-			translation: real_piece_pos(position),
-			..Default::default()
+        translation: real_piece_pos(position),
+        ..Default::default()
     };
     transform.scale *= SCALING_FACTOR;
 
-	commands.spawn_bundle(SpriteBundle {
-		texture,
-		transform,
-		..Default::default()
-    }).insert(position);
+    commands
+        .spawn_bundle(SpriteBundle {
+            texture,
+            transform,
+            ..Default::default()
+        })
+        .insert(position);
 
     /*
 
-	commands.spawn_bundle(SpriteBundle {
-		texture,
-		transform: Transform {
-			translation: real_piece_pos(position),
-			..Default::default()
-		},
-		..Default::default()
+    commands.spawn_bundle(SpriteBundle {
+        texture,
+        transform: Transform {
+            translation: real_piece_pos(position),
+            ..Default::default()
+        },
+        ..Default::default()
     }).insert(position);
 
     */
 
     /*
-	}).insert(Piece {
-		color,
-		piece_type,
-		x: position.0,
-		y: position.1,
-	});
+    }).insert(Piece {
+        color,
+        piece_type,
+        x: position.0,
+        y: position.1,
+    });
     */
 }
 
@@ -438,10 +424,7 @@ struct SelectedSquare {
     position: Option<Position>,
 }
 
-fn delete_highlight(
-    commands: &mut Commands,
-    query: &Query<Entity, With<Highlight>>,
-) {
+fn delete_highlight(commands: &mut Commands, query: &Query<Entity, With<Highlight>>) {
     for entity in query.iter() {
         commands.entity(entity).despawn();
     }
@@ -453,44 +436,40 @@ fn mouse_pressed_system(
     mut sel: ResMut<SelectedSquare>,
     query: Query<(Entity, &mut Position, &mut Transform)>,
     query_highlight: Query<Entity, With<Highlight>>,
-	game_textures: Res<GameTextures>,
+    game_textures: Res<GameTextures>,
     mut commands: Commands,
 ) {
     if buttons.just_pressed(MouseButton::Left) {
         eprintln!("huray!");
         if let Some(position) = mpos.position {
-            if let Some(sel_pos) = sel.position { // a move from sel_pos to position
-                eprintln!("a move is happening from ({}, {}) to ({}, {})",
-                sel_pos.0,
-                sel_pos.1,
-                position.0,
-                position.1
+            if let Some(sel_pos) = sel.position {
+                // a move from sel_pos to position
+                eprintln!(
+                    "a move is happening from ({}, {}) to ({}, {})",
+                    sel_pos.0, sel_pos.1, position.0, position.1
                 );
 
                 // TODO dać tu jakąś funkcję GameState a wywołanie tej funkcji dać do GameState
-                move_piece(&mut commands, query, sel_pos, position);
+                move_piece_physically(&mut commands, query, sel_pos, position);
 
                 sel.position = None;
                 delete_highlight(&mut commands, &query_highlight);
-            }
-            else {
+            } else {
                 sel.position = mpos.position;
                 spawn_tile(
                     &mut commands,
                     game_textures.highlight.clone(),
                     position,
                     true,
-                    );
+                );
             }
-        }
-        else {
+        } else {
             sel.position = None;
             delete_highlight(&mut commands, &query_highlight);
         }
         if let Some(position) = sel.position {
             eprintln!("Some({}, {})", position.0, position.1);
-        }
-        else {
+        } else {
             eprintln!("None");
         }
     }
@@ -500,7 +479,7 @@ fn mouse_pressed_system(
     }
 }
 
-fn delete_piece(
+fn delete_piece_physically(
     commands: &mut Commands,
     query: &mut Query<(Entity, &mut Position, &mut Transform)>,
     position: Position,
@@ -514,13 +493,13 @@ fn delete_piece(
     }
 }
 
-fn move_piece(
+fn move_piece_physically(
     commands: &mut Commands,
     mut query: Query<(Entity, &mut Position, &mut Transform)>,
     from: Position,
     to: Position,
 ) {
-    delete_piece(commands, &mut query, to);
+    delete_piece_physically(commands, &mut query, to);
     for (mut _entity, mut piece_position, mut transform) in query.iter_mut() {
         if *piece_position != from {
             continue;
@@ -532,12 +511,12 @@ fn move_piece(
 }
 
 fn main() {
-	App::new()
-		.add_plugins(DefaultPlugins)
-		.add_startup_system(setup)
-		.add_startup_system_to_stage(StartupStage::PostStartup, create_board)
-		.add_startup_system_to_stage(StartupStage::PostStartup, create_pieces)
+    App::new()
+        .add_plugins(DefaultPlugins)
+        .add_startup_system(setup)
+        .add_startup_system_to_stage(StartupStage::PostStartup, create_board)
+        .add_startup_system_to_stage(StartupStage::PostStartup, create_pieces)
         .add_system(cursor_position_system)
         .add_system(mouse_pressed_system)
-		.run();
+        .run();
 }
