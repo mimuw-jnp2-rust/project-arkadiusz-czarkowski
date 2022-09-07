@@ -1,7 +1,7 @@
 use bevy::prelude::*;
 use bevy::render::camera::RenderTarget;
 
-const SCALING_FACTOR: f32 = 1.;
+const SCALING_FACTOR: f32 = 1.5;
 const IMAGE_SIZE: (f32, f32) = (SCALING_FACTOR * 45., SCALING_FACTOR * 45.);
 
 const TILEL_SPRITE: &str = "sprites/tilel.png";
