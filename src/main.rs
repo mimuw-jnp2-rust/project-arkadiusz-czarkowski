@@ -209,11 +209,37 @@ type Move = (Position, Position);
 impl GameState {
     // TODO check whether both kings exits or immediately return +-INF
     // TODO work on this function, add alfa-beta later
-    fn evaluate(&self, level: u32, cache: &mut HashMap<(GameState, u32), f32>) -> f32 {
+    fn evaluate(&self, level: i32, cache: &mut HashMap<(GameState, i32), f32>) -> f32 {
         let key = (self.clone(), level);
         if let Some(x) = cache.get(&key) {
             *x
         } else {
+            let mut white_king = false;
+            let mut black_king = false;
+            for i in 0..8 {
+                for j in 0..8 {
+                    if let Some(piece) = self.board[i][j] {
+                        if piece.piece_type == PieceType::King {
+                            if piece.piece_color == PieceColor::White {
+                                white_king = true;
+                            }
+                            else {
+                                black_king = true;
+                            }
+                        }
+                    }
+                }
+            }
+            if !white_king {
+                let value = -INFINITY;
+                cache.insert(key, value);
+                return value;
+            }
+            if !black_king {
+                let value = INFINITY;
+                cache.insert(key, value);
+                return value;
+            }
             let value = if level > 0 {
                 let mut score = match self.now_moves {
                     PieceColor::White => -2. * INFINITY,
@@ -705,7 +731,7 @@ fn computer_moves_system(
         return;
     }
     eprintln!("Thinking ...");
-    let mut cache = HashMap::<(GameState, u32), f32>::new();
+    let mut cache = HashMap::<(GameState, i32), f32>::new();
     let depth = 4;
     let score = game_state.evaluate(depth, &mut cache);
     println!("Score: {}", score);
