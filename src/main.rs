@@ -4,6 +4,7 @@ use rand::seq::SliceRandom;
 use std::collections::HashMap;
 
 const INFINITY: f32 = 1000000.;
+const BIG_INFINITY: f32 = 10. * INFINITY;
 const SCALING_FACTOR: f32 = 1.5;
 const IMAGE_SIZE: (f32, f32) = (SCALING_FACTOR * 45., SCALING_FACTOR * 45.);
 
@@ -119,6 +120,9 @@ impl Piece {
     fn gen_bishop(&self, board: Board) -> Vec<Move> {
         self.gen_consecutive(board, vec![(1, 1), (1, -1), (-1, 1), (-1, -1)])
     }
+    fn is_capture2(&self, _from: Position, to: Position, board: Board) -> bool {
+        board[to.0 as usize][to.1 as usize].is_some()
+    }
     fn gen_legal_moves(&self, board: Board) -> Vec<Move> {
         let mut legal_moves: Vec<Move> = Vec::new();
 
@@ -186,6 +190,7 @@ impl Piece {
                 }
             }
         }
+        legal_moves.sort_unstable_by(|(afrom, ato), (bfrom, bto)| self.is_capture2(*bfrom, *bto, board).cmp(&self.is_capture2(*afrom, *ato, board)));
         legal_moves
     }
     fn move_piece(&mut self, x: i8, y: i8) {
@@ -207,9 +212,8 @@ type Move = (Position, Position);
 //struct Move(Position, Position);
 
 impl GameState {
-    // TODO check whether both kings exits or immediately return +-INF
-    // TODO work on this function, add alfa-beta later
-    fn evaluate(&self, level: i32, cache: &mut HashMap<(GameState, i32), f32>) -> f32 {
+    // TODO work on this function
+    fn evaluate(&self, level: i32, cache: &mut HashMap<(GameState, i32), f32>, mut alpha: f32, mut beta: f32) -> f32 {
         let key = (self.clone(), level);
         if let Some(x) = cache.get(&key) {
             *x
@@ -242,17 +246,29 @@ impl GameState {
             }
             let value = if level > 0 {
                 let mut score = match self.now_moves {
-                    PieceColor::White => -2. * INFINITY,
-                    PieceColor::Black => 2. * INFINITY,
+                    PieceColor::White => -BIG_INFINITY,
+                    PieceColor::Black => BIG_INFINITY,
                 };
                 for (from, to) in self.gen_legal_moves() {
                     //println!("(level, from, to) = ({:?}, {:?}, {:?})", level, from, to);
                     let mut next_state = self.clone();
                     next_state.move_piece(from, to);
-                    let next_state_score = next_state.evaluate(level - 1, cache);
+                    let next_state_score = next_state.evaluate(level - 1, cache, alpha, beta);
                     match self.now_moves {
-                        PieceColor::White => score = score.max(next_state_score),
-                        PieceColor::Black => score = score.min(next_state_score),
+                        PieceColor::White => {
+                            score = score.max(next_state_score);
+                            if score > beta {
+                                break;
+                            }
+                            alpha = alpha.max(score);
+                        },
+                        PieceColor::Black => {
+                            score = score.min(next_state_score);
+                            if score < alpha {
+                                break;
+                            }
+                            beta = beta.min(score);
+                        },
                     };
                 }
                 score
@@ -732,8 +748,8 @@ fn computer_moves_system(
     }
     eprintln!("Thinking ...");
     let mut cache = HashMap::<(GameState, i32), f32>::new();
-    let depth = 4;
-    let score = game_state.evaluate(depth, &mut cache);
+    let depth = 5;
+    let score = game_state.evaluate(depth, &mut cache, -BIG_INFINITY, BIG_INFINITY);
     println!("Score: {}", score);
     println!("Cache size: {}", cache.len());
     // TODO check whethe the score if +-INF
@@ -743,7 +759,7 @@ fn computer_moves_system(
         .filter(|(from, to)| {
             let mut next_state = game_state.clone();
             next_state.move_piece(*from, *to);
-            let next_state_score = next_state.evaluate(depth - 1, &mut cache);
+            let next_state_score = next_state.evaluate(depth - 1, &mut cache, -BIG_INFINITY, BIG_INFINITY);
             score == next_state_score
         })
         .collect::<Vec<Move>>();
