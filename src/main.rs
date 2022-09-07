@@ -1,7 +1,8 @@
 use bevy::prelude::*;
 use bevy::render::camera::RenderTarget;
 
-const IMAGE_SIZE: (f32, f32) = (45., 45.);
+const SCALING_FACTOR: f32 = 1.;
+const IMAGE_SIZE: (f32, f32) = (SCALING_FACTOR * 45., SCALING_FACTOR * 45.);
 
 const TILEL_SPRITE: &str = "sprites/tilel.png";
 const KINGL_SPRITE: &str = "sprites/kl.png";
@@ -49,7 +50,7 @@ enum PieceType {
 	Pawn,
 }
 
-#[derive(Clone, Copy, PartialEq)]
+#[derive(Clone, Copy, PartialEq, Component)]
 struct Position(i8, i8);
 
 #[derive(Component)]
@@ -177,31 +178,31 @@ fn create_pieces(
 		PieceType::Queen,
 	);
 	// rookl
-	for i in vec![0, 7] {
+	for i in &[0, 7] {
 		spawn_piece(
 			&mut commands,
 			game_textures.rookl.clone(),
-			Position(i, 0),
+			Position(*i, 0),
 			PieceColor::White,
 			PieceType::Rook,
 		);
 	}
 	// bishopl
-	for i in vec![2, 5] {
+	for i in &[2, 5] {
 		spawn_piece(
 			&mut commands,
 			game_textures.bishopl.clone(),
-			Position(i, 0),
+			Position(*i, 0),
 			PieceColor::White,
 			PieceType::Bishop,
 		);
 	}
 	// knightl
-	for i in vec![1, 6] {
+	for i in &[1, 6] {
 		spawn_piece(
 			&mut commands,
 			game_textures.knightl.clone(),
-			Position(i, 0),
+			Position(*i, 0),
 			PieceColor::White,
 			PieceType::Knight,
 		);
@@ -233,31 +234,31 @@ fn create_pieces(
 		PieceType::Queen,
 	);
 	// rookd
-	for i in vec![0, 7] {
+	for i in &[0, 7] {
 		spawn_piece(
 			&mut commands,
 			game_textures.rookd.clone(),
-			Position(i, 7),
+			Position(*i, 7),
 			PieceColor::Black,
 			PieceType::Rook,
 		);
 	}
 	// bishopd
-	for i in vec![2, 5] {
+	for i in &[2, 5] {
 		spawn_piece(
 			&mut commands,
 			game_textures.bishopd.clone(),
-			Position(i, 7),
+			Position(*i, 7),
 			PieceColor::Black,
 			PieceType::Bishop,
 		);
 	}
 	// knightd
-	for i in vec![1, 6] {
+	for i in &[1, 6] {
 		spawn_piece(
 			&mut commands,
 			game_textures.knightd.clone(),
-			Position(i, 7),
+			Position(*i, 7),
 			PieceColor::Black,
 			PieceType::Knight,
 		);
@@ -275,13 +276,13 @@ fn create_pieces(
 }
 
 fn real_pos(position: Position) -> Vec3 {
-	return Vec3::new((position.0 as f32 - 3.5) * IMAGE_SIZE.0,
-                    (position.1 as f32 - 3.5) * IMAGE_SIZE.1,
-                    0.);
+	Vec3::new((position.0 as f32 - 3.5) * IMAGE_SIZE.0,
+                (position.1 as f32 - 3.5) * IMAGE_SIZE.1,
+                0.)
 }
 
 fn real_piece_pos(position: Position) -> Vec3 {
-    return real_pos(position) + Vec3::new(0., 0., 1.);
+    real_pos(position) + Vec3::new(0., 0., 1.)
 }
 
 fn game_pos(vec: Vec3) -> Option<Position> {
@@ -305,12 +306,15 @@ fn spawn_tile(
 	texture: Handle<Image>,
 	position: Position
 ) {
-	commands.spawn_bundle(SpriteBundle {
-		texture,
-		transform: Transform {
+    let mut transform = Transform {
 			translation: real_pos(position),
 			..Default::default()
-		},
+    };
+    transform.scale *= SCALING_FACTOR;
+
+	commands.spawn_bundle(SpriteBundle {
+		texture,
+		transform,
 		..Default::default()
 	});
 }
@@ -322,6 +326,20 @@ fn spawn_piece(
 	color: PieceColor,
 	piece_type: PieceType,
 ) {
+    let mut transform = Transform {
+			translation: real_piece_pos(position),
+			..Default::default()
+    };
+    transform.scale *= SCALING_FACTOR;
+
+	commands.spawn_bundle(SpriteBundle {
+		texture,
+		transform,
+		..Default::default()
+    }).insert(position);
+
+    /*
+
 	commands.spawn_bundle(SpriteBundle {
 		texture,
 		transform: Transform {
@@ -329,12 +347,18 @@ fn spawn_piece(
 			..Default::default()
 		},
 		..Default::default()
+    }).insert(position);
+
+    */
+
+    /*
 	}).insert(Piece {
 		color,
 		piece_type,
 		x: position.0,
 		y: position.1,
 	});
+    */
 }
 
 #[derive(Component)]
@@ -378,8 +402,8 @@ fn mouse_pressed_system(
     buttons: Res<Input<MouseButton>>,
     mpos: Res<MousePosition>,
     mut sel: ResMut<SelectedSquare>,
-    query: Query<(Entity, &mut Piece, &mut Transform)>,
-    mut commands: Commands,
+    query: Query<(Entity, &mut Position, &mut Transform)>,
+    commands: Commands,
 ) {
     if buttons.just_pressed(MouseButton::Left) {
         eprintln!("huray!");
@@ -392,7 +416,7 @@ fn mouse_pressed_system(
                 position.1
                 );
 
-                // TODO dodać tu obsługę ruchów
+                // TODO dać tu jakąś funkcję GameState a wywołanie tej funkcji dać do GameState
                 move_piece(commands, query, sel_pos, position);
 
                 sel.position = None;
@@ -415,32 +439,31 @@ fn mouse_pressed_system(
 
 fn delete_piece(
     mut commands: Commands,
-    query: &mut Query<(Entity, &mut Piece, &mut Transform)>,
+    query: &mut Query<(Entity, &mut Position, &mut Transform)>,
     position: Position,
 ) {
-    for (mut entity, mut piece, mut transform) in query.iter_mut() {
-        if Position(piece.x, piece.y) != position {
+    for (entity, piece_position, mut _transform) in query.iter_mut() {
+        if *piece_position != position {
             continue;
         }
-        println!("papa :(");
+        eprintln!("papa :(");
         commands.entity(entity).despawn();
     }
 }
 
 fn move_piece(
-    mut commands: Commands,
-    mut query: Query<(Entity, &mut Piece, &mut Transform)>,
+    commands: Commands,
+    mut query: Query<(Entity, &mut Position, &mut Transform)>,
     from: Position,
     to: Position,
 ) {
     delete_piece(commands, &mut query, to);
-    for (mut entity, mut piece, mut transform) in query.iter_mut() {
-        if Position(piece.x, piece.y) != from {
+    for (mut _entity, mut piece_position, mut transform) in query.iter_mut() {
+        if *piece_position != from {
             continue;
         }
-        println!("hejo!");
-        piece.x = to.0;
-        piece.y = to.1;
+        eprintln!("hejo!");
+        *piece_position = to;
         transform.translation = real_piece_pos(to);
     }
 }
