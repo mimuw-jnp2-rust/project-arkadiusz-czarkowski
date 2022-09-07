@@ -1,6 +1,8 @@
+use std::collections::HashMap;
 use bevy::prelude::*;
 use bevy::render::camera::RenderTarget;
 
+const INFINITY: f32 = 1000000.;
 const SCALING_FACTOR: f32 = 1.5;
 const IMAGE_SIZE: (f32, f32) = (SCALING_FACTOR * 45., SCALING_FACTOR * 45.);
 
@@ -38,13 +40,13 @@ struct GameTextures {
     highlight: Handle<Image>,
 }
 
-#[derive(Clone, Copy, PartialEq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 enum PieceColor {
     White,
     Black,
 }
 
-#[derive(Clone, Copy, PartialEq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 enum PieceType {
     King,
     Queen,
@@ -54,10 +56,10 @@ enum PieceType {
     Pawn,
 }
 
-#[derive(Clone, Copy, PartialEq, Component)]
+#[derive(Debug, Clone, Copy, PartialEq, Component)]
 struct Position(i8, i8);
 
-#[derive(Clone, Copy, PartialEq, Component)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Component)]
 struct Piece {
     piece_color: PieceColor,
     piece_type: PieceType,
@@ -69,7 +71,7 @@ impl Piece {
     // TODO work on this function, maybe add position as an argument and maybe some other variables
     fn value(&self) -> f32 {
         let value = match self.piece_type {
-            PieceType::King => 1000.,
+            PieceType::King => INFINITY,
             PieceType::Queen => 9.,
             PieceType::Rook => 5.,
             PieceType::Bishop => 3.,
@@ -125,35 +127,83 @@ impl Piece {
     }
 }
 
-#[derive(PartialEq)] // chyba zmienić to na Hash
+#[derive(Clone, PartialEq, Eq, Hash)]
 struct GameState {
     board: [[Option<Piece>; 8]; 8], // może zmienić na HashSet indeksowany Position
     now_moves: PieceColor,
     player_moves: bool,
 }
 
+struct Move(Position, Position);
+
 impl GameState {
-    fn evaluate(&self) -> f32 {
-        // TODO work on this function
-        0.
+    // TODO work on this function, add alfa-beta later
+    fn evaluate(&self, level: u32, cache: &mut HashMap<(GameState, u32), f32>) -> f32 {
+        let key = (self.clone(), level);
+        if let Some(x) = cache.get(&key) {
+            *x
+        }
+        else {
+            let value = if level > 0 {
+                let mut score = match self.now_moves {
+                    PieceColor::White => -INFINITY,
+                    PieceColor::Black => INFINITY,
+                };
+                for Move(from, to) in self.gen_legal_moves() {
+                    println!("(level, from, to) = ({:?}, {:?}, {:?})", level, from, to);
+                    let mut next_state = self.clone();
+                    next_state.move_piece(from, to);
+                    let next_state_score = next_state.evaluate(level - 1, cache);
+                    match self.now_moves {
+                        PieceColor::White => score = score.max(next_state_score),
+                        PieceColor::Black => score = score.min(next_state_score),
+                    };
+                }
+                score
+            }
+            else {
+                let mut score = 0.;
+                for i in 0..8 {
+                    for j in 0..8 {
+                        if let Some(x) = self.board[i][j] {
+                            score += x.value();
+                            println!("ss: {}", score)
+                        }
+                    }
+                }
+                score
+            };
+            cache.insert(key, value);
+            value
+        }
     }
-    fn move_piece(
+    fn gen_legal_moves(&self) -> Vec<Move> {
+        vec![]
+    }
+    fn move_piece(&mut self,
+                  from: Position,
+                  to: Position,
+    ) {
+        let piece = self.board[from.0 as usize][from.1 as usize].take();
+        assert!(piece.is_some());
+        let mut piece = piece.unwrap();
+        piece.move_piece(to.0, to.1);
+        self.board[to.0 as usize][to.1 as usize] = Some(piece);
+        self.now_moves = match self.now_moves {
+            PieceColor::White => PieceColor::Black,
+            PieceColor::Black => PieceColor::White,
+        };
+    }
+    fn move_piece_for_real(
         &mut self,
         commands: &mut Commands,
         query: Query<(Entity, &mut Position, &mut Transform)>,
         from: Position,
         to: Position,
     ) {
-        let mut piece = self.board[from.0 as usize][from.1 as usize].take().unwrap();
-        piece.x = to.0;
-        piece.y = to.1;
-        self.board[to.0 as usize][to.1 as usize] = Some(piece);
+        self.move_piece(from, to);
         move_piece_physically(commands, query, from, to);
         self.player_moves = !self.player_moves;
-        self.now_moves = match self.now_moves {
-            PieceColor::White => PieceColor::Black,
-            PieceColor::Black => PieceColor::White,
-        };
     }
     fn player_move(
         &mut self,
@@ -166,7 +216,7 @@ impl GameState {
             return;
         }
 
-        self.move_piece(commands, query, from, to);
+        self.move_piece_for_real(commands, query, from, to);
     }
     // TODO add sth to this function or delete it
     fn computer_move(
@@ -176,7 +226,7 @@ impl GameState {
         from: Position,
         to: Position,
     ) {
-        self.move_piece(commands, query, from, to);
+        self.move_piece_for_real(commands, query, from, to);
     }
     // TODO add more functions
 }
@@ -299,7 +349,7 @@ fn create_pieces(
         &mut commands,
         game_textures.kingd.clone(),
         Position(4, 7),
-        PieceColor::White,
+        PieceColor::Black,
         PieceType::King,
         &mut game_state,
     );
@@ -520,10 +570,7 @@ fn mouse_pressed_system(
     if buttons.just_pressed(MouseButton::Left) {
         if let Some(position) = mpos.position {
             if let Some(sel_pos) = sel.position {
-                // TODO dać tu jakąś funkcję GameState a wywołanie tej funkcji dać do GameState
-
                 game_state.player_move(&mut commands, query, sel_pos, position);
-
                 sel.position = None;
                 delete_highlight(&mut commands, &query_highlight);
             } else {
@@ -575,6 +622,21 @@ fn move_piece_physically(
     }
 }
 
+fn computer_moves_system(
+    mut game_state: ResMut<GameState>,
+) {
+    if game_state.player_moves {
+        return;
+    }
+    let mut cache = HashMap::<(GameState, u32), f32>::new();
+    let score = game_state.evaluate(3, &mut cache);
+    let score2 = game_state.evaluate(0, &mut cache);
+    println!("Score: {}", score);
+    println!("Score2: {}", score2);
+
+    eprintln!("Thinking ...");
+}
+
 fn main() {
     App::new()
         .add_plugins(DefaultPlugins)
@@ -583,5 +645,6 @@ fn main() {
         .add_startup_system_to_stage(StartupStage::PostStartup, create_pieces)
         .add_system(cursor_position_system)
         .add_system(mouse_pressed_system)
+        .add_system(computer_moves_system)
         .run();
 }
