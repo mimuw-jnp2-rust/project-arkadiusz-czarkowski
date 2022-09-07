@@ -18,6 +18,7 @@ const ROOKD_SPRITE: &str = "sprites/rd.png";
 const BISHOPD_SPRITE: &str = "sprites/bd.png";
 const KNIGHTD_SPRITE: &str = "sprites/nd.png";
 const PAWND_SPRITE: &str = "sprites/pd.png";
+const HIGHLIGHT_SPRITE: &str = "sprites/highlight.png";
 
 struct GameTextures {
 	tilel: Handle<Image>,
@@ -34,13 +35,16 @@ struct GameTextures {
 	bishopd: Handle<Image>,
 	knightd: Handle<Image>,
 	pawnd: Handle<Image>,
+    highlight: Handle<Image>,
 }
 
+#[derive(Clone, Copy, PartialEq)]
 enum PieceColor {
 	White,
 	Black,
 }
 
+#[derive(Clone, Copy, PartialEq)]
 enum PieceType {
 	King,
 	Queen,
@@ -53,7 +57,7 @@ enum PieceType {
 #[derive(Clone, Copy, PartialEq, Component)]
 struct Position(i8, i8);
 
-#[derive(Component)]
+#[derive(Clone, Copy, PartialEq, Component)]
 struct Piece {
 	color: PieceColor,
 	piece_type: PieceType,
@@ -62,6 +66,9 @@ struct Piece {
 }
 
 impl Piece {
+    fn value(&self) -> f32 { // TODO work on this function, maybe add position as arguments and maybe some other variables as well
+        1.
+    }
 	fn can_move_king(&self, x: i8, y: i8) -> bool {
 		i8::abs(self.x - x) <= 1 && i8::abs(self.y - y) <= 1
 	}
@@ -105,6 +112,19 @@ impl Piece {
 	}
 }
 
+#[derive(PartialEq)] // chyba zmienić to na Hash
+struct GameState {
+    board: [[Option<Piece>; 8]; 8], // może zmienić na HashSet indeksowany Position
+    now_moves: PieceColor,
+}
+
+impl GameState {
+    fn evaluate(&self) -> f32 { // TODO work on this function
+        0.
+    }
+    // TODO add more functions
+}
+
 fn setup(
 	mut commands: Commands,
 	asset_server: Res<AssetServer>,
@@ -124,6 +144,7 @@ fn setup(
 		bishopd: asset_server.load(BISHOPD_SPRITE),
 		knightd: asset_server.load(KNIGHTD_SPRITE),
 		pawnd: asset_server.load(PAWND_SPRITE),
+        highlight: asset_server.load(HIGHLIGHT_SPRITE),
 	};
 	commands
         .insert_resource(game_textures);
@@ -137,6 +158,12 @@ fn setup(
 
     commands
         .insert_resource(SelectedSquare { position: None });
+
+    commands
+        .insert_resource(GameState {
+            board: [[None; 8]; 8],
+            now_moves: PieceColor::White,
+        });
 }
 
 fn create_board(
@@ -151,7 +178,8 @@ fn create_board(
 			spawn_tile(
 				&mut commands,
 				tile.clone(),
-				Position(i, j)
+				Position(i, j),
+                false,
 			);
 		}
 	}
@@ -301,22 +329,34 @@ fn game_pos(vec: Vec3) -> Option<Position> {
     }
 }
 
+#[derive(Component)]
+struct Highlight {}
+
 fn spawn_tile(
 	commands: &mut Commands,
 	texture: Handle<Image>,
-	position: Position
+	position: Position,
+    highlight: bool,
 ) {
     let mut transform = Transform {
 			translation: real_pos(position),
 			..Default::default()
     };
     transform.scale *= SCALING_FACTOR;
-
-	commands.spawn_bundle(SpriteBundle {
-		texture,
-		transform,
-		..Default::default()
-	});
+    let mut sprite = SpriteBundle {
+        texture,
+        transform,
+        ..Default::default()
+    };
+    if highlight {
+        sprite.transform.translation += Vec3::new(0., 0., 0.5);
+        sprite.sprite.color.set_a(0.7);
+        commands.spawn_bundle(sprite)
+            .insert(Highlight {});
+    }
+    else {
+        commands.spawn_bundle(sprite);
+    }
 }
 
 fn spawn_piece(
@@ -398,12 +438,23 @@ struct SelectedSquare {
     position: Option<Position>,
 }
 
+fn delete_highlight(
+    commands: &mut Commands,
+    query: &Query<Entity, With<Highlight>>,
+) {
+    for entity in query.iter() {
+        commands.entity(entity).despawn();
+    }
+}
+
 fn mouse_pressed_system(
     buttons: Res<Input<MouseButton>>,
     mpos: Res<MousePosition>,
     mut sel: ResMut<SelectedSquare>,
     query: Query<(Entity, &mut Position, &mut Transform)>,
-    commands: Commands,
+    query_highlight: Query<Entity, With<Highlight>>,
+	game_textures: Res<GameTextures>,
+    mut commands: Commands,
 ) {
     if buttons.just_pressed(MouseButton::Left) {
         eprintln!("huray!");
@@ -417,16 +468,24 @@ fn mouse_pressed_system(
                 );
 
                 // TODO dać tu jakąś funkcję GameState a wywołanie tej funkcji dać do GameState
-                move_piece(commands, query, sel_pos, position);
+                move_piece(&mut commands, query, sel_pos, position);
 
                 sel.position = None;
+                delete_highlight(&mut commands, &query_highlight);
             }
             else {
                 sel.position = mpos.position;
+                spawn_tile(
+                    &mut commands,
+                    game_textures.highlight.clone(),
+                    position,
+                    true,
+                    );
             }
         }
         else {
             sel.position = None;
+            delete_highlight(&mut commands, &query_highlight);
         }
         if let Some(position) = sel.position {
             eprintln!("Some({}, {})", position.0, position.1);
@@ -435,10 +494,14 @@ fn mouse_pressed_system(
             eprintln!("None");
         }
     }
+    if buttons.just_pressed(MouseButton::Right) {
+        sel.position = None;
+        delete_highlight(&mut commands, &query_highlight);
+    }
 }
 
 fn delete_piece(
-    mut commands: Commands,
+    commands: &mut Commands,
     query: &mut Query<(Entity, &mut Position, &mut Transform)>,
     position: Position,
 ) {
@@ -452,7 +515,7 @@ fn delete_piece(
 }
 
 fn move_piece(
-    commands: Commands,
+    commands: &mut Commands,
     mut query: Query<(Entity, &mut Position, &mut Transform)>,
     from: Position,
     to: Position,
