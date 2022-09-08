@@ -1,9 +1,11 @@
+use std::env;
 use bevy::ecs::event::Events;
 use bevy::prelude::*;
 use bevy::render::camera::RenderTarget;
 use rand::seq::SliceRandom;
 use std::collections::HashMap;
 
+static mut DEPTH: i32 = 5;
 const TABLE_QUEEN: [[i32; 8]; 8] = [
     [-20, -10, -10, -5, -5, -10, -10, -20],
     [-10, 0, 0, 0, 0, 0, 0, -10],
@@ -841,16 +843,20 @@ fn computer_moves_system(
 
     println!("Thinking ...");
     let mut cache = HashMap::<(GameState, i32), f32>::new();
-    let depth = 5;
-    let score = game_state.evaluate(depth, &mut cache, -BIG_INFINITY, BIG_INFINITY);
+    let score: f32;
+    unsafe {
+        score = game_state.evaluate(DEPTH, &mut cache, -BIG_INFINITY, BIG_INFINITY);
+    }
     let possible_moves = game_state.gen_legal_moves();
     let good_moves = possible_moves
         .into_iter()
         .filter(|(from, to)| {
             let mut next_state = game_state.clone();
             next_state.move_piece(*from, *to);
-            let next_state_score =
-                next_state.evaluate(depth - 1, &mut cache, -BIG_INFINITY, BIG_INFINITY);
+            let next_state_score: f32;
+            unsafe {
+                next_state_score = next_state.evaluate(DEPTH - 1, &mut cache, -BIG_INFINITY, BIG_INFINITY);
+            }
             score == next_state_score
         })
         .collect::<Vec<Move>>();
@@ -863,6 +869,12 @@ fn computer_moves_system(
 }
 
 fn main() {
+    let args: Vec<String> = env::args().collect();
+    if args.len() >= 2 {
+        unsafe{
+            DEPTH = args[1].parse::<i32>().unwrap();
+        }
+    }
     App::new()
         .add_plugins(DefaultPlugins)
         .add_startup_system(setup)
