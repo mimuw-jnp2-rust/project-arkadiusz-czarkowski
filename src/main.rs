@@ -321,7 +321,6 @@ impl GameState {
                     PieceColor::Black => BIG_INFINITY,
                 };
                 for (from, to) in self.gen_legal_moves() {
-                    //println!("(level, from, to) = ({:?}, {:?}, {:?})", level, from, to);
                     let mut next_state = self.clone();
                     next_state.move_piece(from, to);
                     let next_state_score = next_state.evaluate(level - 1, cache, alpha, beta);
@@ -349,7 +348,6 @@ impl GameState {
                     for j in 0..8 {
                         if let Some(x) = self.board[i][j] {
                             score += x.value();
-                            //println!("ss: {}", score)
                         }
                     }
                 }
@@ -845,8 +843,6 @@ fn computer_moves_system(
     let mut cache = HashMap::<(GameState, i32), f32>::new();
     let depth = 5;
     let score = game_state.evaluate(depth, &mut cache, -BIG_INFINITY, BIG_INFINITY);
-    println!("Score: {}", score);
-    println!("Cache size: {}", cache.len());
     let possible_moves = game_state.gen_legal_moves();
     let good_moves = possible_moves
         .into_iter()
