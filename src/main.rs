@@ -1,11 +1,21 @@
-use std::env;
 use bevy::ecs::event::Events;
 use bevy::prelude::*;
 use bevy::render::camera::RenderTarget;
 use rand::seq::SliceRandom;
 use std::collections::HashMap;
+use std::env;
 
 static mut DEPTH: i32 = 5;
+const TABLE_KING: [[i32; 8]; 8] = [
+    [-30, -40, -40, -50, -50, -40, -40, -30],
+    [-30, -40, -40, -50, -50, -40, -40, -30],
+    [-30, -40, -40, -50, -50, -40, -40, -30],
+    [-30, -40, -40, -50, -50, -40, -40, -30],
+    [-20, -30, -30, -40, -40, -30, -30, -20],
+    [-10, -20, -20, -20, -20, -20, -20, -10],
+    [20, 20, 0, 0, 0, 0, 20, 20],
+    [20, 30, 10, 0, 0, 10, 30, 20],
+];
 const TABLE_QUEEN: [[i32; 8]; 8] = [
     [-20, -10, -10, -5, -5, -10, -10, -20],
     [-10, 0, 0, 0, 0, 0, 0, -10],
@@ -135,7 +145,7 @@ impl Piece {
         let Position(x, y) = self.table_position();
         let (x, y) = (x as usize, y as usize);
         let value = match self.piece_type {
-            PieceType::King => INFINITY, // + TABLE_KING[x][y] as f32,
+            PieceType::King => INFINITY + TABLE_KING[x][y] as f32,
             PieceType::Queen => 900. + TABLE_QUEEN[x][y] as f32,
             PieceType::Rook => 500. + TABLE_ROOK[x][y] as f32,
             PieceType::Bishop => 330. + TABLE_BISHOP[x][y] as f32,
@@ -194,6 +204,33 @@ impl Piece {
                                 Position(self.x, self.y),
                                 Position(self.x + dx, self.y + dy),
                             ));
+                        }
+                    }
+                }
+                let row: usize = match self.piece_color {
+                    PieceColor::White => 0,
+                    PieceColor::Black => 7,
+                };
+                if self.x == 4 && self.y == row as i8 {
+                    if let Some(piece) = board[0][row] {
+                        if piece.piece_type == PieceType::Rook
+                            && piece.piece_color == self.piece_color
+                            && board[1][row].is_none()
+                            && board[2][row].is_none()
+                            && board[3][row].is_none()
+                        {
+                            legal_moves
+                                .push((Position(self.x, self.y), Position(self.x - 2, self.y)));
+                        }
+                    }
+                    if let Some(piece) = board[7][row] {
+                        if piece.piece_type == PieceType::Rook
+                            && piece.piece_color == self.piece_color
+                            && board[6][row].is_none()
+                            && board[5][row].is_none()
+                        {
+                            legal_moves
+                                .push((Position(self.x, self.y), Position(self.x + 2, self.y)));
                         }
                     }
                 }
@@ -303,12 +340,20 @@ impl GameState {
             let (white_king, black_king) = self.kings();
             if !white_king {
                 let value = -2. * INFINITY - level as f32 / 10.;
-                cache.insert(key, value);
+                unsafe {
+                    if level == DEPTH - 1 || level <= DEPTH - 4 {
+                        cache.insert(key, value);
+                    }
+                }
                 return value;
             }
             if !black_king {
                 let value = 2. * INFINITY + level as f32 / 10.;
-                cache.insert(key, value);
+                unsafe {
+                    if level == DEPTH - 1 || level <= DEPTH - 4 {
+                        cache.insert(key, value);
+                    }
+                }
                 return value;
             }
             /*
@@ -324,7 +369,7 @@ impl GameState {
                 };
                 for (from, to) in self.gen_legal_moves() {
                     let mut next_state = self.clone();
-                    next_state.move_piece(from, to);
+                    next_state.move_piece(from, to, true);
                     let next_state_score = next_state.evaluate(level - 1, cache, alpha, beta);
                     match self.now_moves {
                         PieceColor::White => {
@@ -355,7 +400,11 @@ impl GameState {
                 }
                 score
             };
-            cache.insert(key, value);
+            unsafe {
+                if level == DEPTH - 1 || level <= DEPTH - 4 {
+                    cache.insert(key, value);
+                }
+            }
             value
         }
     }
@@ -379,26 +428,46 @@ impl GameState {
         });
         legal_moves
     }
-    fn move_piece(&mut self, from: Position, to: Position) {
-        let piece = self.board[from.0 as usize][from.1 as usize].take();
-        assert!(piece.is_some());
-        let mut piece = piece.unwrap();
+    fn move_piece(&mut self, from: Position, to: Position, flip: bool) {
+        let mut piece = self.board[from.0 as usize][from.1 as usize].take().unwrap();
+        if piece.piece_type == PieceType::King {
+            if from.0 + 2 == to.0 {
+                self.move_piece(Position(7, from.1), Position(5, to.1), false);
+            }
+            if from.0 - 2 == to.0 {
+                self.move_piece(Position(0, from.1), Position(3, to.1), false);
+            }
+        }
         piece.move_piece(to.0, to.1);
         self.board[to.0 as usize][to.1 as usize] = Some(piece);
-        self.now_moves = match self.now_moves {
-            PieceColor::White => PieceColor::Black,
-            PieceColor::Black => PieceColor::White,
-        };
+        if flip {
+            self.now_moves = match self.now_moves {
+                PieceColor::White => PieceColor::Black,
+                PieceColor::Black => PieceColor::White,
+            };
+        }
     }
     fn move_piece_for_real(
         &mut self,
         commands: &mut Commands,
-        query: Query<(Entity, &mut Position, &mut Transform)>,
+        mut query: Query<(Entity, &mut Position, &mut Transform)>,
         from: Position,
         to: Position,
     ) {
-        self.move_piece(from, to);
-        move_piece_physically(commands, query, from, to);
+        move_piece_physically(commands, &mut query, from, to);
+        if self.board[from.0 as usize][from.1 as usize]
+            .unwrap()
+            .piece_type
+            == PieceType::King
+        {
+            if from.0 + 2 == to.0 {
+                move_piece_physically(commands, &mut query, Position(7, from.1), Position(5, to.1));
+            }
+            if from.0 - 2 == to.0 {
+                move_piece_physically(commands, &mut query, Position(0, from.1), Position(3, to.1));
+            }
+        }
+        self.move_piece(from, to, true);
         self.player_moves = !self.player_moves;
     }
     fn player_move(
@@ -689,27 +758,6 @@ fn spawn_piece(
         x: position.0,
         y: position.1,
     });
-    /*
-
-    commands.spawn_bundle(SpriteBundle {
-        texture,
-        transform: Transform {
-            translation: real_piece_pos(position),
-            ..Default::default()
-        },
-        ..Default::default()
-    }).insert(position);
-
-    */
-
-    /*
-    }).insert(Piece {
-        piece_color,
-        piece_type,
-        x: position.0,
-        y: position.1,
-    });
-    */
 }
 
 #[derive(Component)]
@@ -806,11 +854,11 @@ fn delete_piece_physically(
 
 fn move_piece_physically(
     commands: &mut Commands,
-    mut query: Query<(Entity, &mut Position, &mut Transform)>,
+    query: &mut Query<(Entity, &mut Position, &mut Transform)>,
     from: Position,
     to: Position,
 ) {
-    delete_piece_physically(commands, &mut query, to);
+    delete_piece_physically(commands, query, to);
     for (mut _entity, mut piece_position, mut transform) in query.iter_mut() {
         if *piece_position != from {
             continue;
@@ -831,16 +879,13 @@ fn computer_moves_system(
         println!("Black wins!");
         std::thread::sleep(std::time::Duration::from_millis(1000));
         app_exit_events.send(bevy::app::AppExit);
-    }
-    else if !black_king {
+    } else if !black_king {
         println!("White wins!");
         std::thread::sleep(std::time::Duration::from_millis(1000));
         app_exit_events.send(bevy::app::AppExit);
-    }
-    else if game_state.player_moves {
+    } else if game_state.player_moves {
         return;
-    }
-    else {
+    } else {
         println!("Thinking ...");
         let mut cache = HashMap::<(GameState, i32), f32>::new();
         let score: f32;
@@ -852,20 +897,24 @@ fn computer_moves_system(
             .into_iter()
             .filter(|(from, to)| {
                 let mut next_state = game_state.clone();
-                next_state.move_piece(*from, *to);
+                next_state.move_piece(*from, *to, true);
                 let next_state_score: f32;
                 unsafe {
-                    next_state_score = next_state.evaluate(DEPTH - 1, &mut cache, -BIG_INFINITY, BIG_INFINITY);
+                    next_state_score =
+                        next_state.evaluate(DEPTH - 1, &mut cache, -BIG_INFINITY, BIG_INFINITY);
                 }
+                eprintln!("(move, score) = ({:?}, {:?})", (from, to), next_state_score);
                 score == next_state_score
             })
-        .collect::<Vec<Move>>();
+            .collect::<Vec<Move>>();
+        eprintln!("score = {}", score);
+        eprintln!("good moves = {:?}", good_moves);
+        eprintln!("cache size: {}", cache.len());
         let computer_move = good_moves.choose(&mut rand::thread_rng());
         if let Some(&(from, to)) = computer_move {
             game_state.computer_move(&mut commands, query, from, to);
             println!("Your move");
-        }
-        else {
+        } else {
             app_exit_events.send(bevy::app::AppExit);
         }
     }
@@ -874,7 +923,7 @@ fn computer_moves_system(
 fn main() {
     let args: Vec<String> = env::args().collect();
     if args.len() >= 2 {
-        unsafe{
+        unsafe {
             DEPTH = args[1].parse::<i32>().unwrap();
         }
     }
