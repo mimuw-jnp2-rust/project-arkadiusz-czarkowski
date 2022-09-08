@@ -832,37 +832,43 @@ fn computer_moves_system(
         std::thread::sleep(std::time::Duration::from_millis(1000));
         app_exit_events.send(bevy::app::AppExit);
     }
-    if !black_king {
+    else if !black_king {
         println!("White wins!");
         std::thread::sleep(std::time::Duration::from_millis(1000));
         app_exit_events.send(bevy::app::AppExit);
     }
-    if game_state.player_moves {
+    else if game_state.player_moves {
         return;
     }
-
-    println!("Thinking ...");
-    let mut cache = HashMap::<(GameState, i32), f32>::new();
-    let score: f32;
-    unsafe {
-        score = game_state.evaluate(DEPTH, &mut cache, -BIG_INFINITY, BIG_INFINITY);
-    }
-    let possible_moves = game_state.gen_legal_moves();
-    let good_moves = possible_moves
-        .into_iter()
-        .filter(|(from, to)| {
-            let mut next_state = game_state.clone();
-            next_state.move_piece(*from, *to);
-            let next_state_score: f32;
-            unsafe {
-                next_state_score = next_state.evaluate(DEPTH - 1, &mut cache, -BIG_INFINITY, BIG_INFINITY);
-            }
-            score == next_state_score
-        })
+    else {
+        println!("Thinking ...");
+        let mut cache = HashMap::<(GameState, i32), f32>::new();
+        let score: f32;
+        unsafe {
+            score = game_state.evaluate(DEPTH, &mut cache, -BIG_INFINITY, BIG_INFINITY);
+        }
+        let possible_moves = game_state.gen_legal_moves();
+        let good_moves = possible_moves
+            .into_iter()
+            .filter(|(from, to)| {
+                let mut next_state = game_state.clone();
+                next_state.move_piece(*from, *to);
+                let next_state_score: f32;
+                unsafe {
+                    next_state_score = next_state.evaluate(DEPTH - 1, &mut cache, -BIG_INFINITY, BIG_INFINITY);
+                }
+                score == next_state_score
+            })
         .collect::<Vec<Move>>();
-    let computer_move = good_moves.choose(&mut rand::thread_rng()).unwrap();
-    game_state.computer_move(&mut commands, query, computer_move.0, computer_move.1);
-    println!("Your move");
+        let computer_move = good_moves.choose(&mut rand::thread_rng());
+        if let Some(&(from, to)) = computer_move {
+            game_state.computer_move(&mut commands, query, from, to);
+            println!("Your move");
+        }
+        else {
+            app_exit_events.send(bevy::app::AppExit);
+        }
+    }
 }
 
 fn main() {
