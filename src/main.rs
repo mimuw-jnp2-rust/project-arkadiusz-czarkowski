@@ -1,6 +1,7 @@
 use bevy::ecs::event::Events;
 use bevy::prelude::*;
 use bevy::render::camera::RenderTarget;
+use debug_print::debug_println;
 use rand::seq::SliceRandom;
 use std::collections::HashMap;
 use std::env;
@@ -145,7 +146,6 @@ struct Piece {
 }
 
 impl Piece {
-    // TODO work on this function, maybe add position as an argument and maybe some other variables
     fn table_position(&self) -> Position {
         match self.piece_color {
             PieceColor::White => Position(7 - self.y, self.x),
@@ -316,13 +316,12 @@ type Board = [[Option<Piece>; 8]; 8];
 
 #[derive(Clone, PartialEq, Eq, Hash)]
 struct GameState {
-    board: Board, // może zmienić na HashSet indeksowany Position
+    board: Board,
     now_moves: PieceColor,
     player_moves: bool,
 }
 
 type Move = (Position, Position);
-//struct Move(Position, Position);
 
 impl GameState {
     fn stats(&self) -> (bool, bool, bool) {
@@ -351,7 +350,6 @@ impl GameState {
             && (black_queen == 0 || black_other_pieces <= 1);
         (white_king, black_king, is_endgame)
     }
-    // TODO work on this function
     fn evaluate(
         &self,
         level: i32,
@@ -382,12 +380,6 @@ impl GameState {
                 }
                 return value;
             }
-            /*
-            let mut legal_moves = self.gen_legal_moves;
-            let captures = legal_moves
-                .iter()
-                .filter(
-            */
             let value = if level > 0 {
                 let mut score = match self.now_moves {
                     PieceColor::White => -BIG_INFINITY,
@@ -484,6 +476,8 @@ impl GameState {
         from: Position,
         to: Position,
     ) {
+        spawn_tile(commands, game_textures.highlight.clone(), from, true);
+        spawn_tile(commands, game_textures.highlight.clone(), to, true);
         let piece_type = self.board[from.0 as usize][from.1 as usize]
             .unwrap()
             .piece_type;
@@ -585,7 +579,7 @@ fn setup(mut commands: Commands, asset_server: Res<AssetServer>) {
         }
     }
     if player_moves {
-        println!("Your move");
+        debug_println!("Your move");
     }
     commands.insert_resource(GameState {
         board: [[None; 8]; 8],
@@ -877,9 +871,9 @@ fn mouse_pressed_system(
     if buttons.just_pressed(MouseButton::Left) {
         if let Some(position) = mpos.position {
             if let Some(sel_pos) = sel.position {
-                game_state.player_move(game_textures, &mut commands, query, sel_pos, position);
-                sel.position = None;
                 delete_highlight(&mut commands, &query_highlight);
+                sel.position = None;
+                game_state.player_move(game_textures, &mut commands, query, sel_pos, position);
             } else {
                 sel.position = mpos.position;
                 spawn_tile(
@@ -939,6 +933,7 @@ fn move_piece_physically(
 }
 
 fn computer_moves_system(
+    query_highlight: Query<Entity, With<Highlight>>,
     game_textures: Res<GameTextures>,
     mut commands: Commands,
     query: Query<(Entity, &mut Position, &mut Transform, &mut Handle<Image>)>,
@@ -955,7 +950,7 @@ fn computer_moves_system(
         std::thread::sleep(std::time::Duration::from_millis(1000));
         app_exit_events.send(bevy::app::AppExit);
     } else if !game_state.player_moves {
-        println!("Thinking ...");
+        debug_println!("Thinking ...");
         let mut cache = HashMap::<(GameState, i32), f32>::new();
         let score: f32;
         unsafe {
@@ -972,17 +967,20 @@ fn computer_moves_system(
                     next_state_score =
                         next_state.evaluate(DEPTH - 1, &mut cache, -BIG_INFINITY, BIG_INFINITY);
                 }
-                eprintln!("(move, score) = ({:?}, {:?})", (from, to), next_state_score);
+                debug_println!("(move, score) = ({:?}, {:?})", (from, to), next_state_score);
                 score == next_state_score
             })
             .collect::<Vec<Move>>();
-        eprintln!("score = {}", score);
-        eprintln!("good moves = {:?}", good_moves);
-        eprintln!("cache size: {}", cache.len());
+        debug_println!("score = {}", score);
+        debug_println!("good moves = {:?}", good_moves);
+        debug_println!("cache size: {}", cache.len());
+        delete_highlight(&mut commands, &query_highlight);
         let computer_move = good_moves.choose(&mut rand::thread_rng());
         if let Some(&(from, to)) = computer_move {
             game_state.computer_move(game_textures, &mut commands, query, from, to);
-            println!("Your move");
+            if game_state.player_moves {
+                debug_println!("Your move");
+            }
         } else {
             app_exit_events.send(bevy::app::AppExit);
         }
