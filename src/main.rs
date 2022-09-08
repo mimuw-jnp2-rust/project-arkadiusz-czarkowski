@@ -5,7 +5,7 @@ use rand::seq::SliceRandom;
 use std::collections::HashMap;
 use std::env;
 
-static mut DEPTH: i32 = 5;
+static mut DEPTH: i32 = 6;
 const TABLE_KING: [[i32; 8]; 8] = [
     [-30, -40, -40, -50, -50, -40, -40, -30],
     [-30, -40, -40, -50, -50, -40, -40, -30],
@@ -438,6 +438,9 @@ impl GameState {
                 self.move_piece(Position(0, from.1), Position(3, to.1), false);
             }
         }
+        if piece.piece_type == PieceType::Pawn && (to.1 == 0 || to.1 == 7) {
+            piece.piece_type = PieceType::Queen;
+        }
         piece.move_piece(to.0, to.1);
         self.board[to.0 as usize][to.1 as usize] = Some(piece);
         if flip {
@@ -449,22 +452,40 @@ impl GameState {
     }
     fn move_piece_for_real(
         &mut self,
+        mut game_textures: Res<GameTextures>,
         commands: &mut Commands,
-        mut query: Query<(Entity, &mut Position, &mut Transform)>,
+        mut query: Query<(Entity, &mut Position, &mut Transform, &mut Handle<Image>)>,
         from: Position,
         to: Position,
     ) {
-        move_piece_physically(commands, &mut query, from, to);
-        if self.board[from.0 as usize][from.1 as usize]
+        let piece_type = self.board[from.0 as usize][from.1 as usize]
             .unwrap()
-            .piece_type
-            == PieceType::King
-        {
+            .piece_type;
+        if piece_type == PieceType::Pawn && (to.1 == 0 || to.1 == 7) {
+            move_piece_physically(&mut game_textures, commands, &mut query, from, to, true);
+        } else {
+            move_piece_physically(&mut game_textures, commands, &mut query, from, to, false);
+        }
+        if piece_type == PieceType::King {
             if from.0 + 2 == to.0 {
-                move_piece_physically(commands, &mut query, Position(7, from.1), Position(5, to.1));
+                move_piece_physically(
+                    &mut game_textures,
+                    commands,
+                    &mut query,
+                    Position(7, from.1),
+                    Position(5, to.1),
+                    false,
+                );
             }
             if from.0 - 2 == to.0 {
-                move_piece_physically(commands, &mut query, Position(0, from.1), Position(3, to.1));
+                move_piece_physically(
+                    &mut game_textures,
+                    commands,
+                    &mut query,
+                    Position(0, from.1),
+                    Position(3, to.1),
+                    false,
+                );
             }
         }
         self.move_piece(from, to, true);
@@ -472,25 +493,27 @@ impl GameState {
     }
     fn player_move(
         &mut self,
+        game_textures: Res<GameTextures>,
         commands: &mut Commands,
-        query: Query<(Entity, &mut Position, &mut Transform)>,
+        query: Query<(Entity, &mut Position, &mut Transform, &mut Handle<Image>)>,
         from: Position,
         to: Position,
     ) {
         if !self.player_moves || !self.gen_legal_moves().contains(&(from, to)) {
             return;
         }
-        self.move_piece_for_real(commands, query, from, to);
+        self.move_piece_for_real(game_textures, commands, query, from, to);
     }
     fn computer_move(
         &mut self,
+        game_textures: Res<GameTextures>,
         commands: &mut Commands,
-        query: Query<(Entity, &mut Position, &mut Transform)>,
+        query: Query<(Entity, &mut Position, &mut Transform, &mut Handle<Image>)>,
         from: Position,
         to: Position,
     ) {
         assert!(!self.player_moves && self.gen_legal_moves().contains(&(from, to)));
-        self.move_piece_for_real(commands, query, from, to);
+        self.move_piece_for_real(game_textures, commands, query, from, to);
     }
 }
 
@@ -807,7 +830,7 @@ fn mouse_pressed_system(
     buttons: Res<Input<MouseButton>>,
     mpos: Res<MousePosition>,
     mut sel: ResMut<SelectedSquare>,
-    query: Query<(Entity, &mut Position, &mut Transform)>,
+    query: Query<(Entity, &mut Position, &mut Transform, &mut Handle<Image>)>,
     query_highlight: Query<Entity, With<Highlight>>,
     game_textures: Res<GameTextures>,
     mut commands: Commands,
@@ -816,7 +839,7 @@ fn mouse_pressed_system(
     if buttons.just_pressed(MouseButton::Left) {
         if let Some(position) = mpos.position {
             if let Some(sel_pos) = sel.position {
-                game_state.player_move(&mut commands, query, sel_pos, position);
+                game_state.player_move(game_textures, &mut commands, query, sel_pos, position);
                 sel.position = None;
                 delete_highlight(&mut commands, &query_highlight);
             } else {
@@ -841,10 +864,10 @@ fn mouse_pressed_system(
 
 fn delete_piece_physically(
     commands: &mut Commands,
-    query: &mut Query<(Entity, &mut Position, &mut Transform)>,
+    query: &mut Query<(Entity, &mut Position, &mut Transform, &mut Handle<Image>)>,
     position: Position,
 ) {
-    for (entity, piece_position, mut _transform) in query.iter_mut() {
+    for (entity, piece_position, _transform, _texture) in query.iter_mut() {
         if *piece_position != position {
             continue;
         }
@@ -853,15 +876,24 @@ fn delete_piece_physically(
 }
 
 fn move_piece_physically(
+    game_textures: &mut Res<GameTextures>,
     commands: &mut Commands,
-    query: &mut Query<(Entity, &mut Position, &mut Transform)>,
+    query: &mut Query<(Entity, &mut Position, &mut Transform, &mut Handle<Image>)>,
     from: Position,
     to: Position,
+    promote: bool,
 ) {
     delete_piece_physically(commands, query, to);
-    for (mut _entity, mut piece_position, mut transform) in query.iter_mut() {
+    for (_entity, mut piece_position, mut transform, mut texture) in query.iter_mut() {
         if *piece_position != from {
             continue;
+        }
+        if promote {
+            if to.1 == 7 {
+                *texture = game_textures.queenl.clone();
+            } else {
+                *texture = game_textures.queend.clone();
+            }
         }
         *piece_position = to;
         transform.translation = real_piece_pos(to);
@@ -869,8 +901,9 @@ fn move_piece_physically(
 }
 
 fn computer_moves_system(
+    game_textures: Res<GameTextures>,
     mut commands: Commands,
-    query: Query<(Entity, &mut Position, &mut Transform)>,
+    query: Query<(Entity, &mut Position, &mut Transform, &mut Handle<Image>)>,
     mut game_state: ResMut<GameState>,
     mut app_exit_events: ResMut<Events<bevy::app::AppExit>>,
 ) {
@@ -883,9 +916,7 @@ fn computer_moves_system(
         println!("White wins!");
         std::thread::sleep(std::time::Duration::from_millis(1000));
         app_exit_events.send(bevy::app::AppExit);
-    } else if game_state.player_moves {
-        return;
-    } else {
+    } else if !game_state.player_moves {
         println!("Thinking ...");
         let mut cache = HashMap::<(GameState, i32), f32>::new();
         let score: f32;
@@ -912,7 +943,7 @@ fn computer_moves_system(
         eprintln!("cache size: {}", cache.len());
         let computer_move = good_moves.choose(&mut rand::thread_rng());
         if let Some(&(from, to)) = computer_move {
-            game_state.computer_move(&mut commands, query, from, to);
+            game_state.computer_move(game_textures, &mut commands, query, from, to);
             println!("Your move");
         } else {
             app_exit_events.send(bevy::app::AppExit);
