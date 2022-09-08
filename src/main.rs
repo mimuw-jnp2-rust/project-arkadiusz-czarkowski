@@ -5,6 +5,7 @@ use rand::seq::SliceRandom;
 use std::collections::HashMap;
 use std::env;
 
+static mut NUMBER_OF_PLAYERS: i32 = 1;
 static mut DEPTH: i32 = 6;
 const TABLE_KING_MIDDLE_GAME: [[i32; 8]; 8] = [
     [-30, -40, -40, -50, -50, -40, -40, -30],
@@ -514,7 +515,11 @@ impl GameState {
             }
         }
         self.move_piece(from, to, true);
-        self.player_moves = !self.player_moves;
+        unsafe {
+            if NUMBER_OF_PLAYERS == 1 {
+                self.player_moves = !self.player_moves;
+            }
+        }
     }
     fn player_move(
         &mut self,
@@ -570,7 +575,15 @@ fn setup(mut commands: Commands, asset_server: Res<AssetServer>) {
 
     commands.insert_resource(SelectedSquare { position: None });
 
-    let player_moves = rand::random::<bool>();
+    let mut player_moves = rand::random::<bool>();
+    unsafe {
+        if NUMBER_OF_PLAYERS == 0 {
+            player_moves = false;
+        }
+        if NUMBER_OF_PLAYERS == 2 {
+            player_moves = true;
+        }
+    }
     if player_moves {
         println!("Your move");
     }
@@ -980,7 +993,12 @@ fn main() {
     let args: Vec<String> = env::args().collect();
     if args.len() >= 2 {
         unsafe {
-            DEPTH = args[1].parse::<i32>().unwrap();
+            NUMBER_OF_PLAYERS = args[1].parse::<i32>().unwrap();
+        }
+    }
+    if args.len() >= 3 {
+        unsafe {
+            DEPTH = args[2].parse::<i32>().unwrap();
         }
     }
     App::new()
