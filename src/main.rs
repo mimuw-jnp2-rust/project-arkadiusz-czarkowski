@@ -6,7 +6,7 @@ use std::collections::HashMap;
 use std::env;
 
 static mut DEPTH: i32 = 6;
-const TABLE_KING: [[i32; 8]; 8] = [
+const TABLE_KING_MIDDLE_GAME: [[i32; 8]; 8] = [
     [-30, -40, -40, -50, -50, -40, -40, -30],
     [-30, -40, -40, -50, -50, -40, -40, -30],
     [-30, -40, -40, -50, -50, -40, -40, -30],
@@ -15,6 +15,16 @@ const TABLE_KING: [[i32; 8]; 8] = [
     [-10, -20, -20, -20, -20, -20, -20, -10],
     [20, 20, 0, 0, 0, 0, 20, 20],
     [20, 30, 10, 0, 0, 10, 30, 20],
+];
+const TABLE_KING_END_GAME: [[i32; 8]; 8] = [
+    [-50, -40, -30, -20, -20, -30, -40, -50],
+    [-30, -20, -10, 0, 0, -10, -20, -30],
+    [-30, -10, 20, 30, 30, 20, -10, -30],
+    [-30, -10, 30, 40, 40, 30, -10, -30],
+    [-30, -10, 30, 40, 40, 30, -10, -30],
+    [-30, -10, 20, 30, 30, 20, -10, -30],
+    [-30, -30, 0, 0, 0, 0, -30, -30],
+    [-50, -30, -30, -30, -30, -30, -30, -50],
 ];
 const TABLE_QUEEN: [[i32; 8]; 8] = [
     [-20, -10, -10, -5, -5, -10, -10, -20],
@@ -141,11 +151,18 @@ impl Piece {
             PieceColor::Black => Position(self.y, self.x),
         }
     }
-    fn value(&self) -> f32 {
+    fn value(&self, is_endgame: bool) -> f32 {
         let Position(x, y) = self.table_position();
         let (x, y) = (x as usize, y as usize);
         let value = match self.piece_type {
-            PieceType::King => INFINITY + TABLE_KING[x][y] as f32,
+            PieceType::King => {
+                INFINITY
+                    + if is_endgame {
+                        TABLE_KING_END_GAME[x][y] as f32
+                    } else {
+                        TABLE_KING_MIDDLE_GAME[x][y] as f32
+                    }
+            }
             PieceType::Queen => 900. + TABLE_QUEEN[x][y] as f32,
             PieceType::Rook => 500. + TABLE_ROOK[x][y] as f32,
             PieceType::Bishop => 330. + TABLE_BISHOP[x][y] as f32,
@@ -307,23 +324,31 @@ type Move = (Position, Position);
 //struct Move(Position, Position);
 
 impl GameState {
-    fn kings(&self) -> (bool, bool) {
+    fn stats(&self) -> (bool, bool, bool) {
         let mut white_king = false;
         let mut black_king = false;
+        let mut white_queen = 0;
+        let mut black_queen = 0;
+        let mut white_other_pieces = 0;
+        let mut black_other_pieces = 0;
         for i in 0..8 {
             for j in 0..8 {
                 if let Some(piece) = self.board[i][j] {
-                    if piece.piece_type == PieceType::King {
-                        if piece.piece_color == PieceColor::White {
-                            white_king = true;
-                        } else {
-                            black_king = true;
-                        }
+                    match (piece.piece_type, piece.piece_color) {
+                        (PieceType::King, PieceColor::White) => white_king = true,
+                        (PieceType::King, PieceColor::Black) => black_king = true,
+                        (PieceType::Queen, PieceColor::White) => white_queen += 1,
+                        (PieceType::Queen, PieceColor::Black) => black_queen += 1,
+                        (PieceType::Pawn, _) => {}
+                        (_, PieceColor::White) => white_other_pieces += 1,
+                        (_, PieceColor::Black) => black_other_pieces += 1,
                     }
                 }
             }
         }
-        (white_king, black_king)
+        let is_endgame = (white_queen == 0 || white_other_pieces <= 1)
+            && (black_queen == 0 || black_other_pieces <= 1);
+        (white_king, black_king, is_endgame)
     }
     // TODO work on this function
     fn evaluate(
@@ -337,7 +362,7 @@ impl GameState {
         if let Some(x) = cache.get(&key) {
             *x
         } else {
-            let (white_king, black_king) = self.kings();
+            let (white_king, black_king, is_endgame) = self.stats();
             if !white_king {
                 let value = -2. * INFINITY - level as f32 / 10.;
                 unsafe {
@@ -394,7 +419,7 @@ impl GameState {
                 for i in 0..8 {
                     for j in 0..8 {
                         if let Some(x) = self.board[i][j] {
-                            score += x.value();
+                            score += x.value(is_endgame);
                         }
                     }
                 }
@@ -907,7 +932,7 @@ fn computer_moves_system(
     mut game_state: ResMut<GameState>,
     mut app_exit_events: ResMut<Events<bevy::app::AppExit>>,
 ) {
-    let (white_king, black_king) = game_state.kings();
+    let (white_king, black_king, _is_endgame) = game_state.stats();
     if !white_king {
         println!("Black wins!");
         std::thread::sleep(std::time::Duration::from_millis(1000));
