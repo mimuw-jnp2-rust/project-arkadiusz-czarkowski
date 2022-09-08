@@ -1,4 +1,4 @@
-//use bevy::ecs::event::Events;
+use bevy::ecs::event::Events;
 use bevy::prelude::*;
 use bevy::render::camera::RenderTarget;
 use rand::seq::SliceRandom;
@@ -824,19 +824,21 @@ fn computer_moves_system(
     mut commands: Commands,
     query: Query<(Entity, &mut Position, &mut Transform)>,
     mut game_state: ResMut<GameState>,
-    //mut app_exit_events: ResMut<Events<bevy::app::AppExit>>,
+    mut app_exit_events: ResMut<Events<bevy::app::AppExit>>,
 ) {
-    if game_state.player_moves {
-        return;
-    }
     let (white_king, black_king) = game_state.kings();
     if !white_king {
         println!("Black wins!");
-        //app_exit_events.send(bevy::app::AppExit);
+        std::thread::sleep(std::time::Duration::from_millis(1000));
+        app_exit_events.send(bevy::app::AppExit);
     }
     if !black_king {
         println!("White wins!");
-        //app_exit_events.send(bevy::app::AppExit);
+        std::thread::sleep(std::time::Duration::from_millis(1000));
+        app_exit_events.send(bevy::app::AppExit);
+    }
+    if game_state.player_moves {
+        return;
     }
 
     println!("Thinking ...");
@@ -862,16 +864,6 @@ fn computer_moves_system(
 
     game_state.computer_move(&mut commands, query, computer_move.0, computer_move.1);
     println!("Your move");
-
-    let (white_king, black_king) = game_state.kings();
-    if !white_king {
-        println!("Black wins!");
-        //app_exit_events.send(bevy::app::AppExit);
-    }
-    if !black_king {
-        println!("White wins!");
-        //app_exit_events.send(bevy::app::AppExit);
-    }
 }
 
 fn main() {
