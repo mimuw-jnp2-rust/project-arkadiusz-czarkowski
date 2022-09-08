@@ -1,7 +1,59 @@
+//use bevy::ecs::event::Events;
 use bevy::prelude::*;
 use bevy::render::camera::RenderTarget;
 use rand::seq::SliceRandom;
 use std::collections::HashMap;
+
+const TABLE_QUEEN: [[i32; 8]; 8] = [
+    [-20, -10, -10, -5, -5, -10, -10, -20],
+    [-10, 0, 0, 0, 0, 0, 0, -10],
+    [-10, 0, 5, 5, 5, 5, 0, -10],
+    [-5, 0, 5, 5, 5, 5, 0, -5],
+    [0, 0, 5, 5, 5, 5, 0, -5],
+    [-10, 5, 5, 5, 5, 5, 0, -10],
+    [-10, 0, 5, 0, 0, 0, 0, -10],
+    [-20, -10, -10, -5, -5, -10, -10, -20],
+];
+const TABLE_ROOK: [[i32; 8]; 8] = [
+    [0, 0, 0, 0, 0, 0, 0, 0],
+    [5, 10, 10, 10, 10, 10, 10, 5],
+    [-5, 0, 0, 0, 0, 0, 0, -5],
+    [-5, 0, 0, 0, 0, 0, 0, -5],
+    [-5, 0, 0, 0, 0, 0, 0, -5],
+    [-5, 0, 0, 0, 0, 0, 0, -5],
+    [-5, 0, 0, 0, 0, 0, 0, -5],
+    [0, 0, 0, 5, 5, 0, 0, 0],
+];
+const TABLE_BISHOP: [[i32; 8]; 8] = [
+    [-20, -10, -10, -10, -10, -10, -10, -20],
+    [-10, 0, 0, 0, 0, 0, 0, -10],
+    [-10, 0, 5, 10, 10, 5, 0, -10],
+    [-10, 5, 5, 10, 10, 5, 5, -10],
+    [-10, 0, 10, 10, 10, 10, 0, -10],
+    [-10, 10, 10, 10, 10, 10, 10, -10],
+    [-10, 5, 0, 0, 0, 0, 5, -10],
+    [-20, -10, -10, -10, -10, -10, -10, -20],
+];
+const TABLE_KNIGHT: [[i32; 8]; 8] = [
+    [-50, -40, -30, -30, -30, -30, -40, -50],
+    [-40, -20, 0, 0, 0, 0, -20, -40],
+    [-30, 0, 10, 15, 15, 10, 0, -30],
+    [-30, 5, 15, 20, 20, 15, 5, -30],
+    [-30, 0, 15, 20, 20, 15, 0, -30],
+    [-30, 5, 10, 15, 15, 10, 5, -30],
+    [-40, -20, 0, 5, 5, 0, -20, -40],
+    [-50, -40, -30, -30, -30, -30, -40, -50],
+];
+const TABLE_PAWN: [[i32; 8]; 8] = [
+    [0, 0, 0, 0, 0, 0, 0, 0],
+    [50, 50, 50, 50, 50, 50, 50, 50],
+    [10, 10, 20, 30, 30, 20, 10, 10],
+    [5, 5, 10, 25, 25, 10, 5, 5],
+    [0, 0, 0, 20, 20, 0, 0, 0],
+    [5, -5, -10, 0, 0, -10, -5, 5],
+    [5, 10, 10, -20, -20, 10, 10, 5],
+    [0, 0, 0, 0, 0, 0, 0, 0],
+];
 
 const INFINITY: f32 = 1000000.;
 const BIG_INFINITY: f32 = 10. * INFINITY;
@@ -71,14 +123,22 @@ struct Piece {
 
 impl Piece {
     // TODO work on this function, maybe add position as an argument and maybe some other variables
+    fn table_position(&self) -> Position {
+        match self.piece_color {
+            PieceColor::White => Position(7 - self.y, self.x),
+            PieceColor::Black => Position(self.y, self.x),
+        }
+    }
     fn value(&self) -> f32 {
+        let Position(x, y) = self.table_position();
+        let (x, y) = (x as usize, y as usize);
         let value = match self.piece_type {
-            PieceType::King => INFINITY,
-            PieceType::Queen => 9.,
-            PieceType::Rook => 5.,
-            PieceType::Bishop => 3.,
-            PieceType::Knight => 3.,
-            PieceType::Pawn => 1.,
+            PieceType::King => INFINITY, // + TABLE_KING[x][y] as f32,
+            PieceType::Queen => 900. + TABLE_QUEEN[x][y] as f32,
+            PieceType::Rook => 500. + TABLE_ROOK[x][y] as f32,
+            PieceType::Bishop => 330. + TABLE_BISHOP[x][y] as f32,
+            PieceType::Knight => 320. + TABLE_KNIGHT[x][y] as f32,
+            PieceType::Pawn => 100. + TABLE_PAWN[x][y] as f32,
         };
         match self.piece_color {
             PieceColor::White => value,
@@ -119,9 +179,6 @@ impl Piece {
     }
     fn gen_bishop(&self, board: Board) -> Vec<Move> {
         self.gen_consecutive(board, vec![(1, 1), (1, -1), (-1, 1), (-1, -1)])
-    }
-    fn is_capture2(&self, _from: Position, to: Position, board: Board) -> bool {
-        board[to.0 as usize][to.1 as usize].is_some()
     }
     fn gen_legal_moves(&self, board: Board) -> Vec<Move> {
         let mut legal_moves: Vec<Move> = Vec::new();
@@ -190,7 +247,6 @@ impl Piece {
                 }
             }
         }
-        legal_moves.sort_unstable_by(|(afrom, ato), (bfrom, bto)| self.is_capture2(*bfrom, *bto, board).cmp(&self.is_capture2(*afrom, *ato, board)));
         legal_moves
     }
     fn move_piece(&mut self, x: i8, y: i8) {
@@ -212,38 +268,53 @@ type Move = (Position, Position);
 //struct Move(Position, Position);
 
 impl GameState {
-    // TODO work on this function
-    fn evaluate(&self, level: i32, cache: &mut HashMap<(GameState, i32), f32>, mut alpha: f32, mut beta: f32) -> f32 {
-        let key = (self.clone(), level);
-        if let Some(x) = cache.get(&key) {
-            *x
-        } else {
-            let mut white_king = false;
-            let mut black_king = false;
-            for i in 0..8 {
-                for j in 0..8 {
-                    if let Some(piece) = self.board[i][j] {
-                        if piece.piece_type == PieceType::King {
-                            if piece.piece_color == PieceColor::White {
-                                white_king = true;
-                            }
-                            else {
-                                black_king = true;
-                            }
+    fn kings(&self) -> (bool, bool) {
+        let mut white_king = false;
+        let mut black_king = false;
+        for i in 0..8 {
+            for j in 0..8 {
+                if let Some(piece) = self.board[i][j] {
+                    if piece.piece_type == PieceType::King {
+                        if piece.piece_color == PieceColor::White {
+                            white_king = true;
+                        } else {
+                            black_king = true;
                         }
                     }
                 }
             }
+        }
+        (white_king, black_king)
+    }
+    // TODO work on this function
+    fn evaluate(
+        &self,
+        level: i32,
+        cache: &mut HashMap<(GameState, i32), f32>,
+        mut alpha: f32,
+        mut beta: f32,
+    ) -> f32 {
+        let key = (self.clone(), level);
+        if let Some(x) = cache.get(&key) {
+            *x
+        } else {
+            let (white_king, black_king) = self.kings();
             if !white_king {
-                let value = -INFINITY;
+                let value = -2. * INFINITY - level as f32 / 10.;
                 cache.insert(key, value);
                 return value;
             }
             if !black_king {
-                let value = INFINITY;
+                let value = 2. * INFINITY + level as f32 / 10.;
                 cache.insert(key, value);
                 return value;
             }
+            /*
+            let mut legal_moves = self.gen_legal_moves;
+            let captures = legal_moves
+                .iter()
+                .filter(
+            */
             let value = if level > 0 {
                 let mut score = match self.now_moves {
                     PieceColor::White => -BIG_INFINITY,
@@ -261,14 +332,14 @@ impl GameState {
                                 break;
                             }
                             alpha = alpha.max(score);
-                        },
+                        }
                         PieceColor::Black => {
                             score = score.min(next_state_score);
                             if score < alpha {
                                 break;
                             }
                             beta = beta.min(score);
-                        },
+                        }
                     };
                 }
                 score
@@ -288,6 +359,9 @@ impl GameState {
             value
         }
     }
+    fn is_capture(&self, _from: Position, to: Position) -> bool {
+        self.board[to.0 as usize][to.1 as usize].is_some()
+    }
     fn gen_legal_moves(&self) -> Vec<Move> {
         let mut legal_moves = Vec::new();
         for i in 0..8 {
@@ -299,6 +373,10 @@ impl GameState {
                 }
             }
         }
+        legal_moves.sort_unstable_by(|(afrom, ato), (bfrom, bto)| {
+            self.is_capture(*bfrom, *bto)
+                .cmp(&self.is_capture(*afrom, *ato))
+        });
         legal_moves
     }
     fn move_piece(&mut self, from: Position, to: Position) {
@@ -375,10 +453,14 @@ fn setup(mut commands: Commands, asset_server: Res<AssetServer>) {
 
     commands.insert_resource(SelectedSquare { position: None });
 
+    let player_moves = rand::random::<bool>();
+    if player_moves {
+        println!("Your move");
+    }
     commands.insert_resource(GameState {
         board: [[None; 8]; 8],
         now_moves: PieceColor::White,
-        player_moves: rand::random::<bool>(),
+        player_moves,
     });
 }
 
@@ -742,32 +824,54 @@ fn computer_moves_system(
     mut commands: Commands,
     query: Query<(Entity, &mut Position, &mut Transform)>,
     mut game_state: ResMut<GameState>,
+    //mut app_exit_events: ResMut<Events<bevy::app::AppExit>>,
 ) {
     if game_state.player_moves {
         return;
     }
-    eprintln!("Thinking ...");
+    let (white_king, black_king) = game_state.kings();
+    if !white_king {
+        println!("Black wins!");
+        //app_exit_events.send(bevy::app::AppExit);
+    }
+    if !black_king {
+        println!("White wins!");
+        //app_exit_events.send(bevy::app::AppExit);
+    }
+
+    println!("Thinking ...");
     let mut cache = HashMap::<(GameState, i32), f32>::new();
     let depth = 5;
     let score = game_state.evaluate(depth, &mut cache, -BIG_INFINITY, BIG_INFINITY);
     println!("Score: {}", score);
     println!("Cache size: {}", cache.len());
-    // TODO check whethe the score if +-INF
     let possible_moves = game_state.gen_legal_moves();
     let good_moves = possible_moves
         .into_iter()
         .filter(|(from, to)| {
             let mut next_state = game_state.clone();
             next_state.move_piece(*from, *to);
-            let next_state_score = next_state.evaluate(depth - 1, &mut cache, -BIG_INFINITY, BIG_INFINITY);
+            let next_state_score =
+                next_state.evaluate(depth - 1, &mut cache, -BIG_INFINITY, BIG_INFINITY);
             score == next_state_score
         })
         .collect::<Vec<Move>>();
     println!("good moves: {:?}", good_moves);
 
-    let computer_move = good_moves.choose(&mut rand::thread_rng()).unwrap(); // TODO przemyśleć to unwrap
+    let computer_move = good_moves.choose(&mut rand::thread_rng()).unwrap();
 
     game_state.computer_move(&mut commands, query, computer_move.0, computer_move.1);
+    println!("Your move");
+
+    let (white_king, black_king) = game_state.kings();
+    if !white_king {
+        println!("Black wins!");
+        //app_exit_events.send(bevy::app::AppExit);
+    }
+    if !black_king {
+        println!("White wins!");
+        //app_exit_events.send(bevy::app::AppExit);
+    }
 }
 
 fn main() {
