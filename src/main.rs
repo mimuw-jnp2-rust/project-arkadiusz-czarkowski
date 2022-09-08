@@ -446,7 +446,7 @@ fn setup(mut commands: Commands, asset_server: Res<AssetServer>) {
     commands.insert_resource(game_textures);
 
     commands
-        .spawn_bundle(OrthographicCameraBundle::new_2d())
+        .spawn_bundle(Camera2dBundle::default())
         .insert(MainCamera);
 
     commands.insert_resource(MousePosition { position: None });
@@ -737,7 +737,7 @@ fn cursor_position_system(
 
         let ndc = (screen_pos / window_size) * 2.0 - Vec2::ONE;
 
-        let ndc_to_world = camera_transform.compute_matrix() * camera.projection_matrix.inverse();
+        let ndc_to_world = camera_transform.compute_matrix() * camera.projection_matrix().inverse();
 
         let world_pos = ndc_to_world.project_point3(ndc.extend(-1.0));
 
@@ -860,10 +860,7 @@ fn computer_moves_system(
             score == next_state_score
         })
         .collect::<Vec<Move>>();
-    println!("good moves: {:?}", good_moves);
-
     let computer_move = good_moves.choose(&mut rand::thread_rng()).unwrap();
-
     game_state.computer_move(&mut commands, query, computer_move.0, computer_move.1);
     println!("Your move");
 }
