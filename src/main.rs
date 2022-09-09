@@ -6,6 +6,7 @@ use rand::seq::SliceRandom;
 use std::collections::HashMap;
 use std::env;
 
+const HELP_MESSAGE: &str = "Usage:\ncargo run --release -- x y\nx - number of human players (optional, default = 1)\ny - AI search depth (optional, default = 6)";
 static mut NUMBER_OF_PLAYERS: i32 = 1;
 static mut DEPTH: i32 = 6;
 const TABLE_KING_MIDDLE_GAME: [[i32; 8]; 8] = [
@@ -987,18 +988,38 @@ fn computer_moves_system(
     }
 }
 
-fn main() {
-    let args: Vec<String> = env::args().collect();
+fn print_help() {
+    println!("{}", HELP_MESSAGE);
+    std::process::exit(0);
+}
+
+fn program_options(args: Vec<String>) {
     if args.len() >= 2 {
-        unsafe {
-            NUMBER_OF_PLAYERS = args[1].parse::<i32>().unwrap();
+        if let Ok(x) = args[1].parse::<i32>() {
+            unsafe {
+                NUMBER_OF_PLAYERS = x;
+            }
+        } else {
+            print_help();
         }
     }
     if args.len() >= 3 {
-        unsafe {
-            DEPTH = args[2].parse::<i32>().unwrap();
+        if let Ok(x) = args[2].parse::<i32>() {
+            unsafe {
+                DEPTH = x;
+            }
+        } else {
+            print_help();
         }
     }
+    if args.len() >= 4 {
+        print_help();
+    }
+}
+
+fn main() {
+    let args: Vec<String> = env::args().collect();
+    program_options(args);
     App::new()
         .add_plugins(DefaultPlugins)
         .add_startup_system(setup)
