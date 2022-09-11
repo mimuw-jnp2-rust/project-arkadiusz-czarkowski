@@ -1,9 +1,7 @@
-use bevy::asset::Handle;
-use bevy::render::texture::Image;
+use bevy::prelude::*;
 
 pub const SCALING_FACTOR: f32 = 1.5;
 pub const IMAGE_SIZE: (f32, f32) = (SCALING_FACTOR * 45., SCALING_FACTOR * 45.);
-
 pub const TILEL_SPRITE: &str = "sprites/tilel.png";
 pub const KINGL_SPRITE: &str = "sprites/kl.png";
 pub const QUEENL_SPRITE: &str = "sprites/ql.png";

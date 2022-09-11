@@ -1,9 +1,8 @@
-use bevy::prelude::*;
-
 use crate::common::*;
 use crate::game_state::*;
 use crate::game_textures::*;
 use crate::spawn_tile::*;
+use bevy::prelude::*;
 
 pub fn mouse_pressed_system(
     buttons: Res<Input<MouseButton>>,

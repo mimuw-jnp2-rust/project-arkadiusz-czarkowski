@@ -1,8 +1,6 @@
-use bevy::ecs::component::Component;
-
-use crate::piece_square_tables::*;
-
 use crate::common::*;
+use crate::piece_square_tables::*;
+use bevy::prelude::*;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum PieceColor {

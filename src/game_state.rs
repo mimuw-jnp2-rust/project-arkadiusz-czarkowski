@@ -1,12 +1,11 @@
-use bevy::prelude::*;
-use std::collections::HashMap;
-
 use crate::common::*;
 use crate::game_textures::*;
 use crate::physical_board::*;
 use crate::piece::*;
 use crate::program_options::*;
 use crate::spawn_tile::*;
+use bevy::prelude::*;
+use std::collections::HashMap;
 
 #[derive(Clone, PartialEq, Eq, Hash)]
 pub struct GameState {

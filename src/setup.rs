@@ -1,11 +1,10 @@
-use bevy::prelude::*;
-use debug_print::debug_println;
-
 use crate::common::*;
 use crate::game_state::*;
 use crate::game_textures::*;
 use crate::piece::*;
 use crate::program_options::*;
+use bevy::prelude::*;
+use debug_print::debug_println;
 
 pub fn setup(mut commands: Commands, asset_server: Res<AssetServer>) {
     let game_textures = GameTextures {

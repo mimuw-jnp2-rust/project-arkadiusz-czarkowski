@@ -1,12 +1,11 @@
-use bevy::prelude::*;
-use debug_print::debug_println;
-use rand::seq::SliceRandom;
-use std::collections::HashMap;
-
 use crate::common::*;
 use crate::game_state::*;
 use crate::game_textures::*;
 use crate::program_options::*;
+use bevy::prelude::*;
+use debug_print::debug_println;
+use rand::seq::SliceRandom;
+use std::collections::HashMap;
 
 pub fn computer_moves_system(
     query_highlight: Query<Entity, With<Highlight>>,

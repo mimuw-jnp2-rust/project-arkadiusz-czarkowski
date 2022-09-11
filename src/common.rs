@@ -1,5 +1,4 @@
 use crate::game_textures::*;
-use bevy::ecs::component::Component;
 use bevy::prelude::*;
 
 pub const INFINITY: f32 = 1000000.;

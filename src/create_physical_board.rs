@@ -1,11 +1,10 @@
-use bevy::prelude::*;
-
 use crate::common::*;
 use crate::game_state::*;
 use crate::game_textures::*;
 use crate::piece::*;
 use crate::spawn_piece::*;
 use crate::spawn_tile::*;
+use bevy::prelude::*;
 
 pub fn create_board(mut commands: Commands, game_textures: Res<GameTextures>) {
     let tilel = game_textures.tilel.clone();
