@@ -13,8 +13,8 @@ mod piece;
 mod piece_square_tables;
 mod program_options;
 mod setup;
-mod spawn;
 mod spawn_piece;
+mod spawn_tile;
 
 fn main() {
     program_options::program_options(env::args().collect::<Vec<String>>());

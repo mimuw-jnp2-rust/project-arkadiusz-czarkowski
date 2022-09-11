@@ -7,7 +7,6 @@ use crate::common::*;
 use crate::game_state::*;
 use crate::game_textures::*;
 use crate::program_options::*;
-use crate::spawn::*;
 
 pub fn computer_moves_system(
     query_highlight: Query<Entity, With<Highlight>>,

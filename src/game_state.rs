@@ -6,7 +6,7 @@ use crate::game_textures::*;
 use crate::physical_board::*;
 use crate::piece::*;
 use crate::program_options::*;
-use crate::spawn::*;
+use crate::spawn_tile::*;
 
 #[derive(Clone, PartialEq, Eq, Hash)]
 pub struct GameState {

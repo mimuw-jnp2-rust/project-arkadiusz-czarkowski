@@ -2,7 +2,6 @@ use bevy::prelude::*;
 use bevy::render::camera::RenderTarget;
 
 use crate::common::*;
-use crate::spawn::*;
 
 pub fn cursor_position_system(
     wnds: Res<Windows>,

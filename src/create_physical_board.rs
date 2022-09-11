@@ -4,8 +4,8 @@ use crate::common::*;
 use crate::game_state::*;
 use crate::game_textures::*;
 use crate::piece::*;
-use crate::spawn::*;
 use crate::spawn_piece::*;
+use crate::spawn_tile::*;
 
 pub fn create_board(mut commands: Commands, game_textures: Res<GameTextures>) {
     let tilel = game_textures.tilel.clone();
@@ -23,7 +23,6 @@ pub fn create_pieces(
     game_textures: Res<GameTextures>,
     mut game_state: ResMut<GameState>,
 ) {
-    // kingl
     spawn_piece(
         &mut commands,
         game_textures.kingl.clone(),
@@ -32,7 +31,6 @@ pub fn create_pieces(
         PieceType::King,
         &mut game_state,
     );
-    // queenl
     spawn_piece(
         &mut commands,
         game_textures.queenl.clone(),
@@ -41,7 +39,6 @@ pub fn create_pieces(
         PieceType::Queen,
         &mut game_state,
     );
-    // rookl
     for i in &[0, 7] {
         spawn_piece(
             &mut commands,
@@ -52,7 +49,6 @@ pub fn create_pieces(
             &mut game_state,
         );
     }
-    // bishopl
     for i in &[2, 5] {
         spawn_piece(
             &mut commands,
@@ -63,7 +59,6 @@ pub fn create_pieces(
             &mut game_state,
         );
     }
-    // knightl
     for i in &[1, 6] {
         spawn_piece(
             &mut commands,
@@ -74,7 +69,6 @@ pub fn create_pieces(
             &mut game_state,
         );
     }
-    // pawnl
     for i in 0..8 {
         spawn_piece(
             &mut commands,
@@ -85,7 +79,6 @@ pub fn create_pieces(
             &mut game_state,
         );
     }
-    // kingd
     spawn_piece(
         &mut commands,
         game_textures.kingd.clone(),
@@ -94,7 +87,6 @@ pub fn create_pieces(
         PieceType::King,
         &mut game_state,
     );
-    // queend
     spawn_piece(
         &mut commands,
         game_textures.queend.clone(),
@@ -103,7 +95,6 @@ pub fn create_pieces(
         PieceType::Queen,
         &mut game_state,
     );
-    // rookd
     for i in &[0, 7] {
         spawn_piece(
             &mut commands,
@@ -114,7 +105,6 @@ pub fn create_pieces(
             &mut game_state,
         );
     }
-    // bishopd
     for i in &[2, 5] {
         spawn_piece(
             &mut commands,
@@ -125,7 +115,6 @@ pub fn create_pieces(
             &mut game_state,
         );
     }
-    // knightd
     for i in &[1, 6] {
         spawn_piece(
             &mut commands,
@@ -136,7 +125,6 @@ pub fn create_pieces(
             &mut game_state,
         );
     }
-    // pawnd
     for i in 0..8 {
         spawn_piece(
             &mut commands,
