@@ -20,7 +20,7 @@ pub struct SelectedSquare {
     pub position: Option<Position>,
 }
 
-pub fn real_pos(position: Position) -> Vec3 {
+pub fn real_position(position: Position) -> Vec3 {
     Vec3::new(
         (position.0 as f32 - 3.5) * IMAGE_SIZE.0,
         (position.1 as f32 - 3.5) * IMAGE_SIZE.1,
@@ -28,11 +28,11 @@ pub fn real_pos(position: Position) -> Vec3 {
     )
 }
 
-pub fn real_piece_pos(position: Position) -> Vec3 {
-    real_pos(position) + Vec3::new(0., 0., 1.)
+pub fn real_piece_position(position: Position) -> Vec3 {
+    real_position(position) + Vec3::new(0., 0., 1.)
 }
 
-pub fn game_pos(vec: Vec3) -> Option<Position> {
+pub fn game_position(vec: Vec3) -> Option<Position> {
     let (mut x, mut y) = (vec.x, vec.y);
     x += 3.5 * IMAGE_SIZE.0;
     y += 3.5 * IMAGE_SIZE.1;

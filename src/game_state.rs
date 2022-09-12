@@ -41,6 +41,30 @@ impl GameState {
             && (black_queen == 0 || black_other_pieces <= 1);
         (white_king, black_king, is_endgame)
     }
+    fn cache_insert(
+        &self,
+        level: i32,
+        cache: &mut HashMap<(GameState, i32), f32>,
+        key: (GameState, i32),
+        value: f32,
+    ) {
+        unsafe {
+            if level == DEPTH - 1 || level <= DEPTH - 4 {
+                cache.insert(key, value);
+            }
+        }
+    }
+    fn evaluate_static(&self, is_endgame: bool) -> f32 {
+        let mut score = 0.;
+        for i in 0..8 {
+            for j in 0..8 {
+                if let Some(x) = self.board[i][j] {
+                    score += x.value(is_endgame);
+                }
+            }
+        }
+        score
+    }
     pub fn evaluate(
         &self,
         level: i32,
@@ -55,20 +79,12 @@ impl GameState {
             let (white_king, black_king, is_endgame) = self.stats();
             if !white_king {
                 let value = -2. * INFINITY - level as f32 / 10.;
-                unsafe {
-                    if level == DEPTH - 1 || level <= DEPTH - 4 {
-                        cache.insert(key, value);
-                    }
-                }
+                self.cache_insert(level, cache, key, value);
                 return value;
             }
             if !black_king {
                 let value = 2. * INFINITY + level as f32 / 10.;
-                unsafe {
-                    if level == DEPTH - 1 || level <= DEPTH - 4 {
-                        cache.insert(key, value);
-                    }
-                }
+                self.cache_insert(level, cache, key, value);
                 return value;
             }
             let value = if level > 0 {
@@ -76,7 +92,7 @@ impl GameState {
                     PieceColor::White => -BIG_INFINITY,
                     PieceColor::Black => BIG_INFINITY,
                 };
-                for (from, to) in self.gen_legal_moves() {
+                for (from, to) in self.generate_legal_moves() {
                     let mut next_state = self.clone();
                     next_state.move_piece(from, to, true);
                     let next_state_score = next_state.evaluate(level - 1, cache, alpha, beta);
@@ -99,34 +115,22 @@ impl GameState {
                 }
                 score
             } else {
-                let mut score = 0.;
-                for i in 0..8 {
-                    for j in 0..8 {
-                        if let Some(x) = self.board[i][j] {
-                            score += x.value(is_endgame);
-                        }
-                    }
-                }
-                score
+                self.evaluate_static(is_endgame)
             };
-            unsafe {
-                if level == DEPTH - 1 || level <= DEPTH - 4 {
-                    cache.insert(key, value);
-                }
-            }
+            self.cache_insert(level, cache, key, value);
             value
         }
     }
     fn is_capture(&self, _from: Position, to: Position) -> bool {
         self.board[to.0 as usize][to.1 as usize].is_some()
     }
-    pub fn gen_legal_moves(&self) -> Vec<Move> {
+    pub fn generate_legal_moves(&self) -> Vec<Move> {
         let mut legal_moves = Vec::new();
         for i in 0..8 {
             for j in 0..8 {
                 if let Some(piece) = self.board[i][j] {
                     if piece.piece_color == self.now_moves {
-                        legal_moves.append(&mut piece.gen_legal_moves(self.board));
+                        legal_moves.append(&mut piece.generate_legal_moves(self.board));
                     }
                 }
             }
@@ -137,7 +141,7 @@ impl GameState {
         });
         legal_moves
     }
-    pub fn move_piece(&mut self, from: Position, to: Position, flip: bool) {
+    pub fn move_piece(&mut self, from: Position, to: Position, change_now_moves: bool) {
         let mut piece = self.board[from.0 as usize][from.1 as usize].take().unwrap();
         if piece.piece_type == PieceType::King {
             if from.0 + 2 == to.0 {
@@ -152,7 +156,7 @@ impl GameState {
         }
         piece.move_piece(to.0, to.1);
         self.board[to.0 as usize][to.1 as usize] = Some(piece);
-        if flip {
+        if change_now_moves {
             self.now_moves = match self.now_moves {
                 PieceColor::White => PieceColor::Black,
                 PieceColor::Black => PieceColor::White,
@@ -214,7 +218,7 @@ impl GameState {
         from: Position,
         to: Position,
     ) {
-        if !self.player_moves || !self.gen_legal_moves().contains(&(from, to)) {
+        if !self.player_moves || !self.generate_legal_moves().contains(&(from, to)) {
             return;
         }
         self.move_piece_for_real(game_textures, commands, query, from, to);
@@ -227,7 +231,7 @@ impl GameState {
         from: Position,
         to: Position,
     ) {
-        assert!(!self.player_moves && self.gen_legal_moves().contains(&(from, to)));
+        assert!(!self.player_moves && self.generate_legal_moves().contains(&(from, to)));
         self.move_piece_for_real(game_textures, commands, query, from, to);
     }
 }

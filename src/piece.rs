@@ -71,7 +71,51 @@ impl Piece {
     fn is_capture(&self, x: i8, y: i8, board: Board) -> bool {
         board[x as usize][y as usize].is_some()
     }
-    fn gen_consecutive(&self, board: Board, diffs: Vec<(i8, i8)>) -> Vec<Move> {
+    fn generate_king_moves(&self, board: Board) -> Vec<Move> {
+        let mut legal_moves = Vec::new();
+        for dx in -1..=1 {
+            for dy in -1..=1 {
+                if self.is_legal(self.x + dx, self.y + dy, board) {
+                    legal_moves
+                        .push((Position(self.x, self.y), Position(self.x + dx, self.y + dy)));
+                }
+            }
+        }
+        let row: usize = match self.piece_color {
+            PieceColor::White => 0,
+            PieceColor::Black => 7,
+        };
+        if self.x == 4 && self.y == row as i8 {
+            if let Some(piece) = board[0][row] {
+                if piece.piece_type == PieceType::Rook
+                    && piece.piece_color == self.piece_color
+                    && board[1][row].is_none()
+                    && board[2][row].is_none()
+                    && board[3][row].is_none()
+                {
+                    legal_moves.push((Position(self.x, self.y), Position(self.x - 2, self.y)));
+                }
+            }
+            if let Some(piece) = board[7][row] {
+                if piece.piece_type == PieceType::Rook
+                    && piece.piece_color == self.piece_color
+                    && board[6][row].is_none()
+                    && board[5][row].is_none()
+                {
+                    legal_moves.push((Position(self.x, self.y), Position(self.x + 2, self.y)));
+                }
+            }
+        }
+        legal_moves
+    }
+    fn generate_queen_moves(&self, board: Board) -> Vec<Move> {
+        [
+            self.generate_rook_moves(board),
+            self.generate_bishop_moves(board),
+        ]
+        .concat()
+    }
+    fn generate_consecutive_moves(&self, board: Board, diffs: Vec<(i8, i8)>) -> Vec<Move> {
         let mut legal_moves = Vec::new();
         for (dx, dy) in diffs {
             let mut x = self.x + dx;
@@ -87,107 +131,68 @@ impl Piece {
         }
         legal_moves
     }
-    fn gen_rook(&self, board: Board) -> Vec<Move> {
-        self.gen_consecutive(board, vec![(1, 0), (-1, 0), (0, 1), (0, -1)])
+    fn generate_rook_moves(&self, board: Board) -> Vec<Move> {
+        self.generate_consecutive_moves(board, vec![(1, 0), (-1, 0), (0, 1), (0, -1)])
     }
-    fn gen_bishop(&self, board: Board) -> Vec<Move> {
-        self.gen_consecutive(board, vec![(1, 1), (1, -1), (-1, 1), (-1, -1)])
+    fn generate_bishop_moves(&self, board: Board) -> Vec<Move> {
+        self.generate_consecutive_moves(board, vec![(1, 1), (1, -1), (-1, 1), (-1, -1)])
     }
-    pub fn gen_legal_moves(&self, board: Board) -> Vec<Move> {
-        let mut legal_moves: Vec<Move> = Vec::new();
-
-        match self.piece_type {
-            PieceType::King => {
-                for dx in -1..=1 {
-                    for dy in -1..=1 {
-                        if self.is_legal(self.x + dx, self.y + dy, board) {
-                            legal_moves.push((
-                                Position(self.x, self.y),
-                                Position(self.x + dx, self.y + dy),
-                            ));
-                        }
-                    }
-                }
-                let row: usize = match self.piece_color {
-                    PieceColor::White => 0,
-                    PieceColor::Black => 7,
-                };
-                if self.x == 4 && self.y == row as i8 {
-                    if let Some(piece) = board[0][row] {
-                        if piece.piece_type == PieceType::Rook
-                            && piece.piece_color == self.piece_color
-                            && board[1][row].is_none()
-                            && board[2][row].is_none()
-                            && board[3][row].is_none()
-                        {
-                            legal_moves
-                                .push((Position(self.x, self.y), Position(self.x - 2, self.y)));
-                        }
-                    }
-                    if let Some(piece) = board[7][row] {
-                        if piece.piece_type == PieceType::Rook
-                            && piece.piece_color == self.piece_color
-                            && board[6][row].is_none()
-                            && board[5][row].is_none()
-                        {
-                            legal_moves
-                                .push((Position(self.x, self.y), Position(self.x + 2, self.y)));
-                        }
-                    }
-                }
-            }
-            PieceType::Queen => {
-                legal_moves.append(&mut self.gen_rook(board));
-                legal_moves.append(&mut self.gen_bishop(board));
-            }
-            PieceType::Rook => {
-                legal_moves.append(&mut self.gen_rook(board));
-            }
-            PieceType::Bishop => {
-                legal_moves.append(&mut self.gen_bishop(board));
-            }
-            PieceType::Knight => {
-                for dx in -2..=2 {
-                    for dy in -2..=2 {
-                        if i8::abs(dx * dy) == 2 && self.is_legal(self.x + dx, self.y + dy, board) {
-                            legal_moves.push((
-                                Position(self.x, self.y),
-                                Position(self.x + dx, self.y + dy),
-                            ));
-                        }
-                    }
-                }
-            }
-            PieceType::Pawn => {
-                let dir = match self.piece_color {
-                    PieceColor::White => 1,
-                    PieceColor::Black => -1,
-                };
-                for dx in &[-1, 1] {
-                    if self.is_legal(self.x + dx, self.y + dir, board)
-                        && self.is_capture(self.x + dx, self.y + dir, board)
-                    {
-                        legal_moves.push((
-                            Position(self.x, self.y),
-                            Position(self.x + dx, self.y + dir),
-                        ));
-                    }
-                }
-                if self.is_legal(self.x, self.y + dir, board)
-                    && !self.is_capture(self.x, self.y + dir, board)
-                {
-                    legal_moves.push((Position(self.x, self.y), Position(self.x, self.y + dir)));
-                    if self.y == (-25 * dir + 35) / 10
-                        && self.is_legal(self.x, self.y + 2 * dir, board)
-                        && !self.is_capture(self.x, self.y + 2 * dir, board)
-                    {
-                        legal_moves
-                            .push((Position(self.x, self.y), Position(self.x, self.y + 2 * dir)));
-                    }
+    fn generate_knight_moves(&self, board: Board) -> Vec<Move> {
+        let mut legal_moves = Vec::new();
+        for dx in -2..=2 {
+            for dy in -2..=2 {
+                if i8::abs(dx * dy) == 2 && self.is_legal(self.x + dx, self.y + dy, board) {
+                    legal_moves
+                        .push((Position(self.x, self.y), Position(self.x + dx, self.y + dy)));
                 }
             }
         }
         legal_moves
+    }
+    fn generate_pawn_moves(&self, board: Board) -> Vec<Move> {
+        let mut legal_moves = Vec::new();
+        let direction = match self.piece_color {
+            PieceColor::White => 1,
+            PieceColor::Black => -1,
+        };
+        for dx in &[-1, 1] {
+            if self.is_legal(self.x + dx, self.y + direction, board)
+                && self.is_capture(self.x + dx, self.y + direction, board)
+            {
+                legal_moves.push((
+                    Position(self.x, self.y),
+                    Position(self.x + dx, self.y + direction),
+                ));
+            }
+        }
+        if self.is_legal(self.x, self.y + direction, board)
+            && !self.is_capture(self.x, self.y + direction, board)
+        {
+            legal_moves.push((
+                Position(self.x, self.y),
+                Position(self.x, self.y + direction),
+            ));
+            if self.y == (-25 * direction + 35) / 10
+                && self.is_legal(self.x, self.y + 2 * direction, board)
+                && !self.is_capture(self.x, self.y + 2 * direction, board)
+            {
+                legal_moves.push((
+                    Position(self.x, self.y),
+                    Position(self.x, self.y + 2 * direction),
+                ));
+            }
+        }
+        legal_moves
+    }
+    pub fn generate_legal_moves(&self, board: Board) -> Vec<Move> {
+        match self.piece_type {
+            PieceType::King => self.generate_king_moves(board),
+            PieceType::Queen => self.generate_queen_moves(board),
+            PieceType::Rook => self.generate_rook_moves(board),
+            PieceType::Bishop => self.generate_bishop_moves(board),
+            PieceType::Knight => self.generate_knight_moves(board),
+            PieceType::Pawn => self.generate_pawn_moves(board),
+        }
     }
     pub fn move_piece(&mut self, x: i8, y: i8) {
         self.x = x;

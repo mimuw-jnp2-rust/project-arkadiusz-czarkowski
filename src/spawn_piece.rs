@@ -13,7 +13,7 @@ pub fn spawn_piece(
     game_state: &mut ResMut<GameState>,
 ) {
     let mut transform = Transform {
-        translation: real_piece_pos(position),
+        translation: real_piece_position(position),
         ..Default::default()
     };
     transform.scale *= SCALING_FACTOR;

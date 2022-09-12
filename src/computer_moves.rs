@@ -31,7 +31,7 @@ pub fn computer_moves_system(
         unsafe {
             score = game_state.evaluate(DEPTH, &mut cache, -BIG_INFINITY, BIG_INFINITY);
         }
-        let possible_moves = game_state.gen_legal_moves();
+        let possible_moves = game_state.generate_legal_moves();
         let good_moves = possible_moves
             .into_iter()
             .filter(|(from, to)| {

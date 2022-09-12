@@ -6,8 +6,8 @@ use bevy::prelude::*;
 
 pub fn mouse_pressed_system(
     buttons: Res<Input<MouseButton>>,
-    mpos: Res<MousePosition>,
-    mut sel: ResMut<SelectedSquare>,
+    mouse_position: Res<MousePosition>,
+    mut selected_square: ResMut<SelectedSquare>,
     query: Query<(Entity, &mut Position, &mut Transform, &mut Handle<Image>)>,
     query_highlight: Query<Entity, With<Highlight>>,
     game_textures: Res<GameTextures>,
@@ -15,13 +15,19 @@ pub fn mouse_pressed_system(
     mut game_state: ResMut<GameState>,
 ) {
     if buttons.just_pressed(MouseButton::Left) {
-        if let Some(position) = mpos.position {
-            if let Some(sel_pos) = sel.position {
+        if let Some(position) = mouse_position.position {
+            if let Some(selected_square_position) = selected_square.position {
                 delete_highlight(&mut commands, &query_highlight);
-                sel.position = None;
-                game_state.player_move(game_textures, &mut commands, query, sel_pos, position);
+                selected_square.position = None;
+                game_state.player_move(
+                    game_textures,
+                    &mut commands,
+                    query,
+                    selected_square_position,
+                    position,
+                );
             } else {
-                sel.position = mpos.position;
+                selected_square.position = mouse_position.position;
                 spawn_tile(
                     &mut commands,
                     game_textures.highlight.clone(),
@@ -30,12 +36,12 @@ pub fn mouse_pressed_system(
                 );
             }
         } else {
-            sel.position = None;
+            selected_square.position = None;
             delete_highlight(&mut commands, &query_highlight);
         }
     }
     if buttons.just_pressed(MouseButton::Right) {
-        sel.position = None;
+        selected_square.position = None;
         delete_highlight(&mut commands, &query_highlight);
     }
 }

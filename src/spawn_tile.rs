@@ -9,7 +9,7 @@ pub fn spawn_tile(
     highlight: bool,
 ) {
     let mut transform = Transform {
-        translation: real_pos(position),
+        translation: real_position(position),
         ..Default::default()
     };
     transform.scale *= SCALING_FACTOR;

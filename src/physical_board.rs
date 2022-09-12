@@ -36,6 +36,6 @@ pub fn move_piece_physically(
             }
         }
         *piece_position = to;
-        transform.translation = real_piece_pos(to);
+        transform.translation = real_piece_position(to);
     }
 }
